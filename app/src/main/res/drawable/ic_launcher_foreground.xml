@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Платформа весов -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M30,62h48a6,6 0,0 1,6 6v4a6,6 0,0 1,-6 6H30a6,6 0,0 1,-6 -6v-4a6,6 0,0 1,6 -6z" />
+    <!-- Дисплей -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M40,36h28a4,4 0,0 1,4 4v12a4,4 0,0 1,-4 4H40a4,4 0,0 1,-4 -4V40a4,4 0,0 1,4 -4z" />
+    <path
+        android:fillColor="#1B1B1F"
+        android:pathData="M44,42h4v8h-4zM52,42h4v8h-4zM60,42h4v8h-4z" />
+</vector>

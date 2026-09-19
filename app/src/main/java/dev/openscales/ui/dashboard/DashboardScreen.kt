@@ -1,0 +1,493 @@
+package dev.openscales.ui.dashboard
+
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.BluetoothSearching
+import androidx.compose.material.icons.rounded.Battery5Bar
+import androidx.compose.material.icons.rounded.BugReport
+import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.RestartAlt
+import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.VerticalAlignBottom
+import androidx.compose.material.icons.rounded.Warning
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ButtonGroup
+import androidx.compose.material3.ButtonGroupDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LoadingIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import java.util.concurrent.atomic.AtomicBoolean
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.foundation.interaction.PressInteraction
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import dev.openscales.R
+import dev.openscales.protocol.ScaleModel
+import dev.openscales.protocol.TimerState
+import dev.openscales.session.ConnectionPhase
+import dev.openscales.session.ScaleState
+import dev.openscales.ui.components.TIMER_WIDTH_TEMPLATE
+import dev.openscales.ui.components.formatTime
+import dev.openscales.ui.components.formatWeight
+import dev.openscales.ui.components.labelRes
+import dev.openscales.ui.theme.DigitsTextStyle
+import dev.openscales.ui.theme.OpenScalesTheme
+import dev.openscales.ui.theme.WeightTextStyle
+
+@Composable
+fun DashboardScreen(
+    state: ScaleState,
+    hasSavedDevice: Boolean,
+    snackbarHostState: SnackbarHostState,
+    onTare: () -> Unit,
+    onToggleTimer: () -> Unit,
+    onResetTimer: () -> Unit,
+    onConnect: () -> Unit,
+    onOpenScan: () -> Unit,
+    onOpenSettings: () -> Unit,
+    /** Только debug-сборка: журнал BLE. */
+    onOpenJournal: (() -> Unit)? = null,
+    /** Срабатывать при касании (true) или при отпускании (false). */
+    triggerOnPress: Boolean = true,
+) {
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        state.name ?: stringResource(R.string.no_scale),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                },
+                subtitle = { Text(state.model.takeIf { it.isKnown }?.displayName ?: stringResource(R.string.app_name)) },
+                actions = {
+                    if (onOpenJournal != null) {
+                        IconButton(onClick = onOpenJournal) { Icon(Icons.Rounded.BugReport, "Журнал BLE") }
+                    }
+                    IconButton(onClick = onOpenScan) {
+                        Icon(Icons.AutoMirrored.Rounded.BluetoothSearching, stringResource(R.string.action_scan))
+                    }
+                    IconButton(onClick = onOpenSettings) {
+                        Icon(Icons.Rounded.Settings, stringResource(R.string.action_settings))
+                    }
+                },
+            )
+        },
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            StatusRow(state)
+            ScaleDisplay(state, modifier = Modifier.weight(1f))
+            AnimatedVisibility(visible = !state.isReady) {
+                ConnectBanner(state, hasSavedDevice, onConnect, onOpenScan)
+            }
+            ControlButtons(
+                enabled = state.isReady,
+                triggerOnPress = triggerOnPress,
+                timerRunning = state.timerState == TimerState.RUNNING,
+                onTare = onTare,
+                onToggleTimer = onToggleTimer,
+                onResetTimer = onResetTimer,
+            )
+        }
+    }
+}
+
+@Composable
+private fun StatusRow(state: ScaleState) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        val phaseText = if (state.reconnecting && !state.phase.isBusy) {
+            stringResource(R.string.reconnecting)
+        } else {
+            stringResource(state.phase.labelRes())
+        }
+        AssistChip(
+            onClick = {},
+            label = { Text(phaseText) },
+            leadingIcon = if (state.phase.isBusy || state.reconnecting) {
+                { LoadingIndicator(Modifier.size(AssistChipDefaults.IconSize)) }
+            } else {
+                null
+            },
+        )
+        state.batteryPercent?.takeIf { state.isReady }?.let { percent ->
+            AssistChip(
+                onClick = {},
+                label = {
+                    Text(stringResource(R.string.battery, percent))
+                },
+                leadingIcon = {
+                    Icon(
+                        Icons.Rounded.Battery5Bar,
+                        contentDescription = null,
+                        modifier = Modifier.size(AssistChipDefaults.IconSize),
+                    )
+                },
+            )
+        }
+    }
+}
+
+/** «Экран весов»: крупные таймер и вес, поток внизу. */
+@Composable
+private fun ScaleDisplay(state: ScaleState, modifier: Modifier = Modifier) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.extraLarge,
+        color = MaterialTheme.colorScheme.surfaceContainerHighest,
+    ) {
+        Column(modifier = Modifier.padding(24.dp)) {
+            // Строка предупреждений: место зарезервировано, чтобы таймер не прыгал при перегрузе.
+            Row(
+                modifier = Modifier.fillMaxWidth().heightIn(min = 24.dp),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (state.overload) {
+                    Icon(Icons.Rounded.Warning, null, tint = MaterialTheme.colorScheme.error)
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        stringResource(R.string.overload),
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                }
+            }
+            ReadoutArea(Modifier.fillMaxWidth().weight(1f)) { style ->
+                Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
+                    TimerReadout(state.timeSeconds, style)
+                }
+                Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
+                    Row(verticalAlignment = Alignment.Bottom) {
+                        Text(
+                            formatWeight(state.weight.takeIf { state.isReady }, state.unit),
+                            style = style,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                        )
+                        Text(
+                            state.unit.symbol,
+                            style = MaterialTheme.typography.headlineMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(start = UnitGap, bottom = 16.dp),
+                        )
+                    }
+                }
+            }
+            Metric(
+                label = stringResource(R.string.flow_rate),
+                value = stringResource(
+                    R.string.flow_rate_value,
+                    formatWeight(state.flowRate.takeIf { state.isReady && !state.model.isLegacy() }, state.unit),
+                    state.unit.symbol,
+                ),
+            )
+        }
+    }
+}
+
+/**
+ * Таймер размером с вес. Ширину задаёт невидимый шаблон `00:00`, текст прижат к правому краю:
+ * при переходе `9:59 → 10:00` двоеточие и секунды остаются на месте, а блок — по центру.
+ */
+@Composable
+private fun TimerReadout(seconds: Int, style: TextStyle) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            stringResource(R.string.timer),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Box(contentAlignment = Alignment.CenterEnd) {
+            Text(TIMER_WIDTH_TEMPLATE, style = style, maxLines = 1, modifier = Modifier.alpha(0f))
+            Text(formatTime(seconds), style = style, color = MaterialTheme.colorScheme.onSurface, maxLines = 1)
+        }
+    }
+}
+
+/** Самый широкий вес, под который считаем масштаб (DOT/Basic 3 — до 2 кг). */
+private const val WEIGHT_WIDTH_TEMPLATE = "0000.0"
+private val UnitGap = 8.dp
+private val UnitReserve = 40.dp
+private val LabelReserve = 24.dp
+
+/**
+ * Область таймера и веса. Оба показаны одним стилем [WeightTextStyle], уменьшенным ровно настолько,
+ * чтобы две строки и самые широкие значения (`00:00`, `0000.0 g`) поместились — на маленьких экранах
+ * они уменьшаются вместе и остаются одного размера.
+ */
+@Composable
+private fun ReadoutArea(modifier: Modifier, content: @Composable ColumnScope.(TextStyle) -> Unit) {
+    BoxWithConstraints(modifier) {
+        val measurer = rememberTextMeasurer()
+        val density = LocalDensity.current
+        val base = WeightTextStyle
+        val scale = remember(constraints, density) {
+            val timer = measurer.measure(TIMER_WIDTH_TEMPLATE, base).size
+            val weight = measurer.measure(WEIGHT_WIDTH_TEMPLATE, base).size.width +
+                with(density) { (UnitGap + UnitReserve).roundToPx() }
+            val widest = maxOf(timer.width, weight).toFloat()
+            val rowHeight = constraints.maxHeight / 2f - with(density) { LabelReserve.toPx() }
+            minOf(1f, constraints.maxWidth / widest, rowHeight / timer.height).coerceAtLeast(0.3f)
+        }
+        val style = base.copy(fontSize = base.fontSize * scale, lineHeight = base.lineHeight * scale)
+        Column(Modifier.fillMaxSize()) { content(style) }
+    }
+}
+
+private fun ScaleModel.isLegacy() = this == ScaleModel.OLD_DOUBLE
+
+@Composable
+private fun Metric(label: String, value: String) {
+    Column {
+        Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(value, style = DigitsTextStyle, color = MaterialTheme.colorScheme.onSurface)
+    }
+}
+
+@Composable
+private fun ConnectBanner(
+    state: ScaleState,
+    hasSavedDevice: Boolean,
+    onConnect: () -> Unit,
+    onOpenScan: () -> Unit,
+) {
+    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = state.error ?: stringResource(state.phase.labelRes()),
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.bodyLarge,
+            )
+            val busy = state.phase.isBusy || state.reconnecting
+            if (hasSavedDevice) {
+                Button(onClick = onConnect, enabled = !busy) { Text(stringResource(R.string.action_connect)) }
+            } else {
+                Button(onClick = onOpenScan) { Text(stringResource(R.string.action_find_scale)) }
+            }
+        }
+    }
+}
+
+/** Кнопки как на корпусе весов: Тара / Старт-Пауза / Сброс — Material 3 Expressive ButtonGroup. */
+@Composable
+private fun ControlButtons(
+    enabled: Boolean,
+    triggerOnPress: Boolean,
+    timerRunning: Boolean,
+    onTare: () -> Unit,
+    onToggleTimer: () -> Unit,
+    onResetTimer: () -> Unit,
+) {
+    val height = ButtonDefaults.LargeContainerHeight
+    val tareInteraction = remember { MutableInteractionSource() }
+    val timerInteraction = remember { MutableInteractionSource() }
+    val resetInteraction = remember { MutableInteractionSource() }
+    // По умолчанию как физические кнопки весов: срабатывают в момент касания (настраивается).
+    val tare = rememberPressAction(tareInteraction, enabled && triggerOnPress, onTare)
+    val toggleTimer = rememberPressAction(timerInteraction, enabled && triggerOnPress, onToggleTimer)
+    val resetTimer = rememberPressAction(resetInteraction, enabled && triggerOnPress, onResetTimer)
+    ButtonGroup(
+        overflowIndicator = { ButtonGroupDefaults.OverflowIndicator(it) },
+        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        customItem(
+            buttonGroupContent = {
+                FilledTonalButton(
+                    onClick = tare,
+                    enabled = enabled,
+                    shapes = ButtonDefaults.shapesFor(height),
+                    contentPadding = ControlButtonPadding,
+                    interactionSource = tareInteraction,
+                    modifier = Modifier.weight(1f).heightIn(min = height).animateWidth(tareInteraction),
+                ) {
+                    ButtonLabel(Icons.Rounded.VerticalAlignBottom, stringResource(R.string.tare), height)
+                }
+            },
+            menuContent = {},
+        )
+        customItem(
+            buttonGroupContent = {
+                Button(
+                    onClick = toggleTimer,
+                    enabled = enabled,
+                    shapes = ButtonDefaults.shapesFor(height),
+                    contentPadding = ControlButtonPadding,
+                    interactionSource = timerInteraction,
+                    modifier = Modifier.weight(1.3f).heightIn(min = height).animateWidth(timerInteraction),
+                ) {
+                    AnimatedContent(targetState = timerRunning, label = "timer-button") { running ->
+                        ButtonLabel(
+                            if (running) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                            stringResource(if (running) R.string.pause else R.string.start),
+                            height,
+                        )
+                    }
+                }
+            },
+            menuContent = {},
+        )
+        customItem(
+            buttonGroupContent = {
+                OutlinedButton(
+                    onClick = resetTimer,
+                    enabled = enabled,
+                    shapes = ButtonDefaults.shapesFor(height),
+                    contentPadding = ControlButtonPadding,
+                    interactionSource = resetInteraction,
+                    modifier = Modifier.weight(1f).heightIn(min = height).animateWidth(resetInteraction),
+                ) {
+                    ButtonLabel(Icons.Rounded.RestartAlt, stringResource(R.string.reset), height)
+                }
+            },
+            menuContent = {},
+        )
+    }
+}
+
+/**
+ * Действие по касанию: срабатывает на [PressInteraction.Press]. Возвращаемый колбэк передаётся в `onClick`
+ * и нужен для случаев без касания (TalkBack, клавиатура): если действие уже выполнено касанием,
+ * `onClick` после отпускания его не повторяет.
+ */
+@Composable
+private fun rememberPressAction(
+    interactionSource: MutableInteractionSource,
+    enabled: Boolean,
+    action: () -> Unit,
+): () -> Unit {
+    val currentAction by rememberUpdatedState(action)
+    val handledByPress = remember { AtomicBoolean(false) }
+    LaunchedEffect(interactionSource, enabled) {
+        interactionSource.interactions.collect { interaction ->
+            when (interaction) {
+                is PressInteraction.Press -> if (enabled) {
+                    handledByPress.set(true)
+                    currentAction()
+                }
+                // Палец увели с кнопки — onClick не будет, сбрасываем флаг.
+                is PressInteraction.Cancel -> handledByPress.set(false)
+            }
+        }
+    }
+    return remember { { if (!handledByPress.getAndSet(false)) currentAction() } }
+}
+
+@Composable
+private fun ButtonLabel(icon: ImageVector, text: String, height: androidx.compose.ui.unit.Dp) {
+    // Три крупные кнопки в ряд: иконка над подписью, чтобы текст помещался на узких экранах.
+    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Icon(icon, contentDescription = null, modifier = Modifier.size(32.dp))
+        Text(text, style = MaterialTheme.typography.titleMedium, maxLines = 1)
+    }
+}
+
+private val ControlButtonPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 8.dp)
+
+@Preview(showBackground = true, heightDp = 780)
+@Composable
+private fun DashboardReadyPreview() {
+    OpenScalesTheme(dynamicColor = false) {
+        DashboardScreen(
+            state = ScaleState(
+                phase = ConnectionPhase.READY,
+                name = "Black Mirror Basic 3",
+                model = ScaleModel.BASIC3,
+                weight = 18.3f,
+                flowRate = 2.4f,
+                timeSeconds = 75,
+                timerState = TimerState.RUNNING,
+                batteryPercent = 64,
+                address = "AA:BB",
+            ),
+            hasSavedDevice = true,
+            snackbarHostState = SnackbarHostState(),
+            onTare = {}, onToggleTimer = {}, onResetTimer = {}, onConnect = {}, onOpenScan = {}, onOpenSettings = {},
+        )
+    }
+}
+
+@Preview(showBackground = true, widthDp = 360, heightDp = 640)
+@Composable
+private fun DashboardSmallScreenPreview() {
+    OpenScalesTheme(dynamicColor = false) {
+        DashboardScreen(
+            state = ScaleState(
+                phase = ConnectionPhase.READY, name = "TIMEMORE_Dot", model = ScaleModel.DOT,
+                weight = 1999.9f, timeSeconds = 600, timerState = TimerState.RUNNING, batteryPercent = 89, address = "AA",
+            ),
+            hasSavedDevice = true,
+            snackbarHostState = SnackbarHostState(),
+            onTare = {}, onToggleTimer = {}, onResetTimer = {}, onConnect = {}, onOpenScan = {}, onOpenSettings = {},
+        )
+    }
+}
+
+@Preview(showBackground = true, heightDp = 780)
+@Composable
+private fun DashboardDisconnectedPreview() {
+    OpenScalesTheme(dynamicColor = false) {
+        DashboardScreen(
+            state = ScaleState(),
+            hasSavedDevice = false,
+            snackbarHostState = SnackbarHostState(),
+            onTare = {}, onToggleTimer = {}, onResetTimer = {}, onConnect = {}, onOpenScan = {}, onOpenSettings = {},
+        )
+    }
+}
+

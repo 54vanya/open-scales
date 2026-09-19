@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <!-- Только debug: экран журнала BLE-обмена. -->
+        <activity
+            android:name=".debug.JournalActivity"
+            android:exported="false"
+            android:parentActivityName=".MainActivity" />
+    </application>
+</manifest>

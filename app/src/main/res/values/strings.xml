@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Open Scales</string>
+
+    <!-- Фазы подключения -->
+    <string name="phase_disconnected">Не подключено</string>
+    <string name="phase_connecting">Подключение…</string>
+    <string name="phase_bonding">Сопряжение…</string>
+    <string name="phase_subscribing">Подписка на данные…</string>
+    <string name="phase_handshaking">Чтение параметров…</string>
+    <string name="phase_ready">Подключено</string>
+    <string name="phase_disconnecting">Отключение…</string>
+    <string name="phase_failed">Ошибка подключения</string>
+    <string name="reconnecting">Переподключение…</string>
+
+    <!-- Главный экран -->
+    <string name="no_scale">Весы не выбраны</string>
+    <string name="action_find_scale">Найти весы</string>
+    <string name="action_connect">Подключить</string>
+    <string name="action_settings">Настройки весов</string>
+    <string name="action_scan">Поиск весов</string>
+    <string name="tare">Тара</string>
+    <string name="start">Старт</string>
+    <string name="pause">Пауза</string>
+    <string name="reset">Сброс</string>
+    <string name="flow_rate">Поток</string>
+    <string name="flow_rate_value">%1$s %2$s/s</string>
+    <string name="timer">Таймер</string>
+    <string name="overload">Перегруз</string>
+    <string name="battery">Батарея %1$d%%</string>
+
+    <!-- Поиск -->
+    <string name="scan_title">Поиск весов</string>
+    <string name="scan_subtitle_scanning">Идёт поиск…</string>
+    <string name="scan_subtitle_idle">Поиск остановлен</string>
+    <string name="scan_again">Искать снова</string>
+    <string name="scan_stop">Остановить</string>
+    <string name="scan_empty">Включите весы и поднесите их ближе к телефону</string>
+    <string name="scan_saved">Запомненные весы</string>
+    <string name="scan_found">Найденные весы</string>
+    <string name="scan_rssi">%1$s · %2$d dBm</string>
+    <string name="scan_bonded">сопряжены</string>
+    <string name="permission_title">Нужен доступ к Bluetooth</string>
+    <string name="permission_text">Приложению нужно разрешение на поиск устройств рядом и подключение к ним, чтобы найти весы.</string>
+    <string name="permission_grant">Разрешить</string>
+    <string name="bluetooth_off_title">Bluetooth выключен</string>
+    <string name="bluetooth_off_text">Включите Bluetooth, чтобы найти и подключить весы.</string>
+    <string name="bluetooth_enable">Включить Bluetooth</string>
+    <string name="back">Назад</string>
+
+    <!-- Настройки -->
+    <string name="settings_title">Настройки весов</string>
+    <string name="settings_title_app">Настройки</string>
+    <string name="settings_not_connected">Подключите весы, чтобы изменить настройки</string>
+    <string name="section_app">Приложение</string>
+    <string name="setting_app_trigger">Срабатывание кнопок</string>
+    <string name="trigger_on_press">При касании</string>
+    <string name="trigger_on_release">При отпускании</string>
+    <string name="setting_app_beep">Звук кнопок в приложении</string>
+    <string name="setting_app_beep_note">Нота сигнала</string>
+    <string name="note_c">До</string>
+    <string name="note_d">Ре</string>
+    <string name="note_e">Ми</string>
+    <string name="note_f">Фа</string>
+    <string name="note_g">Соль</string>
+    <string name="note_a">Ля</string>
+    <string name="note_b">Си</string>
+    <string name="section_device">Устройство</string>
+    <string name="section_weighing">Взвешивание</string>
+    <string name="section_actions">Действия</string>
+    <string name="setting_name">Имя</string>
+    <string name="setting_model">Модель</string>
+    <string name="setting_address">Адрес</string>
+    <string name="setting_firmware">Прошивка</string>
+    <string name="setting_serial">Серийный номер</string>
+    <string name="setting_unit">Единицы</string>
+    <string name="unit_gram">Граммы</string>
+    <string name="unit_ounce">Унции</string>
+    <string name="setting_sensitivity">Чувствительность</string>
+    <string name="setting_precision">Точность</string>
+    <string name="level_high">Высокая</string>
+    <string name="level_medium">Средняя</string>
+    <string name="level_low">Низкая</string>
+    <string name="setting_sound">Звук кнопок</string>
+    <string name="setting_brightness">Яркость экрана</string>
+    <string name="brightness_dark">Тёмный</string>
+    <string name="brightness_medium">Средний</string>
+    <string name="brightness_bright">Яркий</string>
+    <string name="setting_standby">Авто-отключение</string>
+    <string name="standby_minutes">%1$d мин</string>
+    <string name="decrease">Уменьшить</string>
+    <string name="increase">Увеличить</string>
+    <string name="unknown_value">—</string>
+    <string name="action_disconnect">Отключить</string>
+    <string name="action_power_off">Выключить весы</string>
+    <string name="action_factory_reset">Сброс к заводским</string>
+    <string name="action_forget">Забыть устройство</string>
+    <string name="factory_reset_confirm">Все настройки весов вернутся к заводским. Весы отключатся.</string>
+    <string name="forget_confirm">Весы будут отключены, сопряжение удалено. Чтобы снова пользоваться ими, найдите их заново.</string>
+    <string name="confirm">Подтвердить</string>
+    <string name="cancel">Отмена</string>
+    <string name="save">Сохранить</string>
+    <string name="rename_title">Имя весов</string>
+    <string name="rename_limit">Не больше %1$d байт (≈ %2$d латинских символов)</string>
+</resources>
