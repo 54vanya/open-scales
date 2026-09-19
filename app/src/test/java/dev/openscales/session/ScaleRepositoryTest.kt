@@ -84,6 +84,42 @@ class ScaleRepositoryTest {
     }
 
     @Test
+    fun `in background reconnect stops and resumes when the screen is shown again`() = runTest {
+        val env = Env(this, basic3)
+        runCurrent()
+        env.repository.autoConnect()
+        settle()
+        assertTrue(env.repository.state.value.isReady)
+
+        // Приложение свернули, весы выключились.
+        env.repository.setAppVisible(false)
+        env.configure = { it.connectError = "device not found" }
+        env.transports.last().disconnectFromDevice()
+        settle()
+        assertEquals(1, env.transports.size)
+        assertFalse(env.repository.state.value.reconnecting)
+
+        // Вернулись на экран — новая попытка, а не результат старого таймаута.
+        env.configure = {}
+        env.repository.setAppVisible(true)
+        env.repository.autoConnect()
+        settle()
+        assertEquals(2, env.transports.size)
+        assertTrue(env.repository.state.value.isReady)
+    }
+
+    @Test
+    fun `showing the screen while connected does not start a second connection`() = runTest {
+        val env = Env(this, basic3)
+        runCurrent()
+        env.repository.autoConnect()
+        settle()
+        repeat(3) { env.repository.autoConnect() }
+        settle()
+        assertEquals(1, env.transports.size)
+    }
+
+    @Test
     fun `user disconnect does not reconnect`() = runTest {
         val env = Env(this, basic3)
         runCurrent()

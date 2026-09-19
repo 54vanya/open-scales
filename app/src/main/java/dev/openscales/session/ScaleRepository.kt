@@ -30,6 +30,9 @@ class ScaleRepository(
     /** Дополнительный получатель лога сессий (журнал BLE в debug-сборке). */
     private val sessionLog: ((String) -> Unit)? = null,
 ) {
+    @Volatile
+    private var appVisible = true
+
     private val session = MutableStateFlow<ScaleSession?>(null)
     private val idle = MutableStateFlow(ScaleState())
     private var connectionJob: Job? = null
@@ -39,6 +42,15 @@ class ScaleRepository(
         .stateIn(scope, SharingStarted.Eagerly, ScaleState())
 
     val savedDevice: StateFlow<SavedDevice?> = store.device.stateIn(scope, SharingStarted.Eagerly, null)
+
+    /**
+     * Приложение на экране или свёрнуто. В фоне не начинаем новых попыток переподключения:
+     * иначе пользователь открывает приложение и видит результат давно истёкших попыток.
+     * Установленное соединение при сворачивании сохраняется.
+     */
+    fun setAppVisible(visible: Boolean) {
+        appVisible = visible
+    }
 
     /** Ручное подключение из экрана поиска. */
     fun connect(address: String, name: String, model: ScaleModel) {
@@ -92,7 +104,7 @@ class ScaleRepository(
                 EndReason.LOST -> true
                 EndReason.FAILED -> !manual || everReady
             }
-            if (!retry || ++attempts > maxReconnectAttempts) {
+            if (!retry || !appVisible || ++attempts > maxReconnectAttempts) {
                 idle.value = last.copy(reconnecting = false, flowRate = 0f)
                 session.value = null
                 return

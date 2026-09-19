@@ -1,6 +1,8 @@
 package dev.openscales
 
+import android.app.Activity
 import android.app.Application
+import android.os.Bundle
 import android.bluetooth.BluetoothManager
 import dev.openscales.ble.AndroidBleTransport
 import dev.openscales.ble.BleJournal
@@ -57,6 +59,30 @@ class OpenScalesApp : Application() {
                 sound.settings.collect { if (it.beepEnabled) beeper.prepare(it.beepNote) else beeper.release() }
             }
         }
+    }
+
+    override fun onCreate() {
+        super.onCreate()
+        registerActivityLifecycleCallbacks(
+            object : ActivityLifecycleCallbacks {
+                private var started = 0
+
+                override fun onActivityStarted(activity: Activity) {
+                    started++
+                    repository.setAppVisible(true)
+                }
+
+                override fun onActivityStopped(activity: Activity) {
+                    if (--started <= 0) repository.setAppVisible(false)
+                }
+
+                override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) = Unit
+                override fun onActivityResumed(activity: Activity) = Unit
+                override fun onActivityPaused(activity: Activity) = Unit
+                override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) = Unit
+                override fun onActivityDestroyed(activity: Activity) = Unit
+            },
+        )
     }
 
     val isBluetoothEnabled: Boolean get() = bluetoothManager.adapter?.isEnabled == true

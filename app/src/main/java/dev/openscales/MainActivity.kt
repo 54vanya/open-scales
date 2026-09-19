@@ -10,6 +10,8 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.openscales.ui.ScaleViewModel
 import dev.openscales.ui.dashboard.DashboardScreen
@@ -37,6 +39,11 @@ class MainActivity : ComponentActivity() {
                 val appSettings by viewModel.appSettings.collectAsStateWithLifecycle()
                 val prerequisite = rememberBlePrerequisite()
                 val snackbar = remember { SnackbarHostState() }
+                // На каждый показ экрана: если весы не подключены и попытка не идёт — пробуем заново,
+                // чтобы пользователь не видел результат давно истёкшего таймаута.
+                LifecycleEventEffect(Lifecycle.Event.ON_START) {
+                    if (prerequisite.value == BlePrerequisite.OK) viewModel.autoConnect()
+                }
                 LaunchedEffect(prerequisite.value) {
                     if (prerequisite.value == BlePrerequisite.OK) viewModel.autoConnect()
                 }

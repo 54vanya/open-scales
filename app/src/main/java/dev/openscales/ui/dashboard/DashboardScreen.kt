@@ -126,7 +126,7 @@ fun DashboardScreen(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            StatusRow(state)
+            BatteryChip(state)
             ScaleDisplay(state, modifier = Modifier.weight(1f))
             AnimatedVisibility(visible = !state.isReady) {
                 ConnectBanner(state, hasSavedDevice, onConnect, onOpenScan)
@@ -143,29 +143,15 @@ fun DashboardScreen(
     }
 }
 
+/** Единственная индикация состояния вверху — заряд весов; статус подключения показывает баннер снизу. */
 @Composable
-private fun StatusRow(state: ScaleState) {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-        val phaseText = if (state.reconnecting && !state.phase.isBusy) {
-            stringResource(R.string.reconnecting)
-        } else {
-            stringResource(state.phase.labelRes())
-        }
-        AssistChip(
-            onClick = {},
-            label = { Text(phaseText) },
-            leadingIcon = if (state.phase.isBusy || state.reconnecting) {
-                { LoadingIndicator(Modifier.size(AssistChipDefaults.IconSize)) }
-            } else {
-                null
-            },
-        )
-        state.batteryPercent?.takeIf { state.isReady }?.let { percent ->
+private fun BatteryChip(state: ScaleState) {
+    val percent = state.batteryPercent?.takeIf { state.isReady }
+    Row(modifier = Modifier.heightIn(min = 32.dp), verticalAlignment = Alignment.CenterVertically) {
+        if (percent != null) {
             AssistChip(
                 onClick = {},
-                label = {
-                    Text(stringResource(R.string.battery, percent))
-                },
+                label = { Text(stringResource(R.string.battery, percent)) },
                 leadingIcon = {
                     Icon(
                         Icons.Rounded.Battery5Bar,
@@ -308,12 +294,17 @@ private fun ConnectBanner(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            val busy = state.phase.isBusy || state.reconnecting
+            if (busy) LoadingIndicator(Modifier.size(28.dp))
             Text(
-                text = state.error ?: stringResource(state.phase.labelRes()),
+                text = when {
+                    state.reconnecting && !state.phase.isBusy -> stringResource(R.string.reconnecting)
+                    state.phase.isBusy -> stringResource(state.phase.labelRes())
+                    else -> state.error ?: stringResource(state.phase.labelRes())
+                },
                 modifier = Modifier.weight(1f),
                 style = MaterialTheme.typography.bodyLarge,
             )
-            val busy = state.phase.isBusy || state.reconnecting
             if (hasSavedDevice) {
                 Button(onClick = onConnect, enabled = !busy) { Text(stringResource(R.string.action_connect)) }
             } else {
