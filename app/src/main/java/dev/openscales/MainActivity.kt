@@ -1,6 +1,7 @@
 package dev.openscales
 
 import android.content.Intent
+import android.media.AudioManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -32,6 +33,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        // «Пик» идёт как системный звук — пусть клавиши громкости в приложении меняют именно его.
+        volumeControlStream = AudioManager.STREAM_SYSTEM
         setContent {
             OpenScalesTheme {
                 val state by viewModel.state.collectAsStateWithLifecycle()
