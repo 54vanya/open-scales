@@ -13,6 +13,9 @@ export JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home
 ./gradlew :app:testDebugUnitTest :app:assembleDebug :app:lintDebug
 ```
 
+Харнес для устройства и эмулятора — `tools/dev.sh` (без аргументов — список команд).
+Справка по протоколу с байтами и результатами проверки на весах — `docs/protocol.md`.
+
 ## Структура
 
 - `protocol/` — кадры `A5 5A … CRC16/Modbus`, декодер, legacy TES08, реклама. Чистый Kotlin.
