@@ -91,6 +91,7 @@ data class SettingsActions(
     val onBeepNote: (BeepNote) -> Unit = {},
     val onTriggerOnPress: (Boolean) -> Unit = {},
     val onKeepScreenOn: (Boolean) -> Unit = {},
+    val onSyncTimer: (Boolean) -> Unit = {},
 )
 
 private enum class Confirm { FACTORY_RESET, FORGET }
@@ -160,6 +161,19 @@ fun SettingsScreen(
                                 Switch(checked = appSettings.keepScreenOn, onCheckedChange = actions.onKeepScreenOn)
                             },
                             onClick = { actions.onKeepScreenOn(!appSettings.keepScreenOn) },
+                        )
+                    },
+                    { i, n ->
+                        SettingRow(
+                            i, n, Icons.Rounded.Timer, stringResource(R.string.setting_app_sync_timer),
+                            stringResource(R.string.setting_app_sync_timer_hint),
+                            trailing = {
+                                Switch(
+                                    checked = appSettings.syncTimerWithScale,
+                                    onCheckedChange = actions.onSyncTimer,
+                                )
+                            },
+                            onClick = { actions.onSyncTimer(!appSettings.syncTimerWithScale) },
                         )
                     },
                     { i, n ->

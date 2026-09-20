@@ -57,6 +57,8 @@
     <string name="setting_app_trigger">Срабатывание кнопок</string>
     <string name="trigger_on_press">При касании</string>
     <string name="trigger_on_release">При отпускании</string>
+    <string name="setting_app_sync_timer">Синхронизировать таймер с весами</string>
+    <string name="setting_app_sync_timer_hint">Показывать время с весов вместо секундомера приложения</string>
     <string name="setting_app_beep">Звук кнопок в приложении</string>
     <string name="setting_app_beep_note">Нота сигнала</string>
     <string name="note_c">До</string>

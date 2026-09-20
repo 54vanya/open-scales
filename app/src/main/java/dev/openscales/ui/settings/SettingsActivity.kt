@@ -55,6 +55,7 @@ class SettingsActivity : ComponentActivity() {
                         onBeepNote = viewModel::setBeepNote,
                         onTriggerOnPress = viewModel::setTriggerOnPress,
                         onKeepScreenOn = viewModel::setKeepScreenOn,
+                        onSyncTimer = viewModel::setSyncTimerWithScale,
                     ),
                 )
             }

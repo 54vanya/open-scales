@@ -3,6 +3,7 @@ package dev.openscales
 import android.app.Activity
 import android.app.Application
 import android.os.Bundle
+import android.os.SystemClock
 import android.bluetooth.BluetoothManager
 import dev.openscales.ble.AndroidBleTransport
 import dev.openscales.ble.BleJournal
@@ -17,6 +18,9 @@ import dev.openscales.session.ScaleRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class OpenScalesApp : Application() {
@@ -35,6 +39,11 @@ class OpenScalesApp : Application() {
         ScaleRepository(
             scope = appScope,
             store = DataStoreSavedDeviceStore(this),
+            syncTimer = appSettingsStore.settings
+                .map { it.syncTimerWithScale }
+                .stateIn(appScope, SharingStarted.Eagerly, false),
+            // Не `nanoTime`: секундомер должен идти и пока телефон спит.
+            nowMs = SystemClock::elapsedRealtime,
             transportFactory = { address ->
                 val transport = AndroidBleTransport(this, bluetoothManager.adapter, address)
                 bleJournal?.let { LoggingBleTransport(transport, it) } ?: transport

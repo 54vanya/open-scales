@@ -135,7 +135,7 @@ fun DashboardScreen(
                 ConnectBanner(state, hasSavedDevice, onConnect, onOpenScan)
             }
             ControlButtons(
-                enabled = state.isReady,
+                tareEnabled = state.isReady,
                 triggerOnPress = triggerOnPress,
                 timerRunning = state.timerState == TimerState.RUNNING,
                 onTare = onTare,
@@ -364,7 +364,8 @@ private fun ConnectBanner(
 /** Кнопки как на корпусе весов: Тара / Старт-Пауза / Сброс — Material 3 Expressive ButtonGroup. */
 @Composable
 private fun ControlButtons(
-    enabled: Boolean,
+    /** Тара невозможна без весов; таймер ведёт приложение, поэтому его кнопки активны всегда. */
+    tareEnabled: Boolean,
     triggerOnPress: Boolean,
     timerRunning: Boolean,
     onTare: () -> Unit,
@@ -376,9 +377,9 @@ private fun ControlButtons(
     val timerInteraction = remember { MutableInteractionSource() }
     val resetInteraction = remember { MutableInteractionSource() }
     // По умолчанию как физические кнопки весов: срабатывают в момент касания (настраивается).
-    val tare = rememberPressAction(tareInteraction, enabled && triggerOnPress, onTare)
-    val toggleTimer = rememberPressAction(timerInteraction, enabled && triggerOnPress, onToggleTimer)
-    val resetTimer = rememberPressAction(resetInteraction, enabled && triggerOnPress, onResetTimer)
+    val tare = rememberPressAction(tareInteraction, tareEnabled && triggerOnPress, onTare)
+    val toggleTimer = rememberPressAction(timerInteraction, triggerOnPress, onToggleTimer)
+    val resetTimer = rememberPressAction(resetInteraction, triggerOnPress, onResetTimer)
     ButtonGroup(
         overflowIndicator = { ButtonGroupDefaults.OverflowIndicator(it) },
         modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
@@ -388,7 +389,7 @@ private fun ControlButtons(
             buttonGroupContent = {
                 FilledTonalButton(
                     onClick = tare,
-                    enabled = enabled,
+                    enabled = tareEnabled,
                     shapes = ButtonDefaults.shapesFor(height),
                     contentPadding = ControlButtonPadding,
                     interactionSource = tareInteraction,
@@ -403,7 +404,6 @@ private fun ControlButtons(
             buttonGroupContent = {
                 Button(
                     onClick = toggleTimer,
-                    enabled = enabled,
                     shapes = ButtonDefaults.shapesFor(height),
                     contentPadding = ControlButtonPadding,
                     interactionSource = timerInteraction,
@@ -424,7 +424,6 @@ private fun ControlButtons(
             buttonGroupContent = {
                 OutlinedButton(
                     onClick = resetTimer,
-                    enabled = enabled,
                     shapes = ButtonDefaults.shapesFor(height),
                     contentPadding = ControlButtonPadding,
                     interactionSource = resetInteraction,

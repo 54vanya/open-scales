@@ -45,14 +45,15 @@ class ScaleViewModel(application: Application) : AndroidViewModel(application) {
         command { tare() }
     }
 
+    // Секундомер ведёт приложение: кнопки работают и без весов, ошибки соединения тут не при чём.
     fun toggleTimer() {
         app.buttonSound.onControlPressed()
-        command { toggleTimer() }
+        launchReporting { repository.toggleTimer() }
     }
 
     fun resetTimer() {
         app.buttonSound.onControlPressed()
-        command { resetTimer() }
+        launchReporting { repository.resetTimer() }
     }
 
     fun setBeepEnabled(enabled: Boolean) {
@@ -61,6 +62,10 @@ class ScaleViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setKeepScreenOn(keep: Boolean) {
         app.appScope.launch { app.appSettingsStore.setKeepScreenOn(keep) }
+    }
+
+    fun setSyncTimerWithScale(sync: Boolean) {
+        app.appScope.launch { app.appSettingsStore.setSyncTimerWithScale(sync) }
     }
 
     fun setTriggerOnPress(onPress: Boolean) {

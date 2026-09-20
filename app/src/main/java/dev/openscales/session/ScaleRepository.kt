@@ -4,16 +4,23 @@ import dev.openscales.ble.BleTransport
 import dev.openscales.data.SavedDevice
 import dev.openscales.data.SavedDeviceStore
 import dev.openscales.protocol.ScaleModel
+import dev.openscales.protocol.TimerState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 /**
@@ -29,6 +36,10 @@ class ScaleRepository(
     private val maxReconnectAttempts: Int = MAX_RECONNECT_ATTEMPTS,
     /** Дополнительный получатель лога сессий (журнал BLE в debug-сборке). */
     private val sessionLog: ((String) -> Unit)? = null,
+    /** Настройка «Синхронизировать таймер с весами». */
+    private val syncTimer: StateFlow<Boolean> = MutableStateFlow(false),
+    /** Монотонные часы телефона; в тестах — виртуальное время. */
+    private val nowMs: () -> Long = { System.nanoTime() / 1_000_000 },
 ) {
     @Volatile
     private var appVisible = true
@@ -37,9 +48,27 @@ class ScaleRepository(
     private val idle = MutableStateFlow(ScaleState())
     private var connectionJob: Job? = null
 
-    val state: StateFlow<ScaleState> = session
-        .flatMapLatest { it?.state ?: idle }
-        .stateIn(scope, SharingStarted.Eagerly, ScaleState())
+    private var clock = TimerClock()
+    private val timer = MutableStateFlow(TimerSnapshot())
+    private var tickJob: Job? = null
+
+    private val scaleState: Flow<ScaleState> = session.flatMapLatest { it?.state ?: idle }
+
+    val state: StateFlow<ScaleState> = combine(scaleState, timer, syncTimer) { scale, local, sync ->
+        if (scaleOwnsTimer(scale, sync)) scale else scale.copy(timerState = local.state, timeSeconds = local.seconds)
+    }.stateIn(scope, SharingStarted.Eagerly, ScaleState())
+
+    init {
+        // В режиме синхронизации часы приложения идут следом за весами: если связь оборвётся,
+        // отсчёт продолжится с того же места, а не с того, что приложение считало параллельно.
+        scope.launch {
+            combine(scaleState, syncTimer) { scale, sync -> scale.takeIf { scaleOwnsTimer(it, sync) } }
+                .filterNotNull()
+                .map { TimerSnapshot(it.timerState, it.timeSeconds) }
+                .distinctUntilChanged()
+                .collect { adopt(it) }
+        }
+    }
 
     val savedDevice: StateFlow<SavedDevice?> = store.device.stateIn(scope, SharingStarted.Eagerly, null)
 
@@ -144,6 +173,75 @@ class ScaleRepository(
         val s = session.value ?: throw CommandException(CommandException.Kind.CANCELLED, "весы не подключены")
         return s.block()
     }
+
+    // region секундомер
+
+    /**
+     * Секундомер ведёт приложение, поэтому кнопки работают и без весов. Команда всё равно уходит весам,
+     * когда есть подключение: идущий таймер удерживает их от авто-отключения посреди пролива.
+     */
+    suspend fun toggleTimer() =
+        applyTimer(if (timer.value.state == TimerState.RUNNING) TimerState.PAUSED else TimerState.RUNNING)
+
+    suspend fun resetTimer() = applyTimer(TimerState.RESET)
+
+    private suspend fun applyTimer(target: TimerState) {
+        // В режиме синхронизации состояние показывают весы, и оптимистичное переключение делает сессия.
+        val scaleOwns = scaleOwnsTimer(state.value, syncTimer.value)
+        if (!scaleOwns) setTimer(target)
+        val s = session.value ?: return
+        try {
+            s.timer(target, awaitAck = scaleOwns)
+        } catch (e: CommandException) {
+            // Без синхронизации показания приложения от весов не зависят: молчим.
+            if (scaleOwns) throw e
+        }
+    }
+
+    private fun setTimer(target: TimerState) {
+        val now = nowMs()
+        clock = when (target) {
+            TimerState.RUNNING -> if (clock.state == TimerState.RUNNING) clock else clock.copy(state = target, startedAt = now)
+            TimerState.PAUSED -> TimerClock(TimerState.PAUSED, now, clock.elapsedMs(now))
+            TimerState.RESET -> TimerClock()
+        }
+        publishTimer()
+    }
+
+    private fun adopt(snapshot: TimerSnapshot) {
+        clock = TimerClock(snapshot.state, nowMs(), snapshot.seconds * 1_000L)
+        publishTimer()
+    }
+
+    /** Значение считается от метки времени, поэтому отсчёт не копит дрейф и переживает сон процесса. */
+    private fun publishTimer() {
+        timer.value = TimerSnapshot(clock.state, (clock.elapsedMs(nowMs()) / 1_000).toInt())
+        tickJob?.cancel()
+        if (clock.state != TimerState.RUNNING) return
+        tickJob = scope.launch {
+            while (isActive) {
+                delay(1_000 - clock.elapsedMs(nowMs()) % 1_000)
+                timer.value = TimerSnapshot(clock.state, (clock.elapsedMs(nowMs()) / 1_000).toInt())
+            }
+        }
+    }
+
+    private fun scaleOwnsTimer(state: ScaleState, sync: Boolean) =
+        sync && state.isReady && state.model != ScaleModel.OLD_DOUBLE
+
+    private data class TimerSnapshot(val state: TimerState = TimerState.RESET, val seconds: Int = 0)
+
+    /** Момент запуска и накопленное до паузы время; текущее значение — их разность с «сейчас». */
+    private data class TimerClock(
+        val state: TimerState = TimerState.RESET,
+        val startedAt: Long = 0L,
+        val accumulatedMs: Long = 0L,
+    ) {
+        fun elapsedMs(now: Long): Long =
+            accumulatedMs + if (state == TimerState.RUNNING) now - startedAt else 0L
+    }
+
+    // endregion
 
     companion object {
         const val RECONNECT_INTERVAL_MS = 5_000L

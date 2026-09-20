@@ -161,6 +161,21 @@ class ScaleSessionTest {
     }
 
     @Test
+    fun `timer command without ack does not wait for the scale`() = runTest {
+        val t = FakeBleTransport()
+        t.silentCommands += Cmd.TIMER
+        val (s, _) = session(t, ScaleModel.BASIC3)
+        s.start()
+        settle()
+
+        s.timer(TimerState.RUNNING, awaitAck = false)
+        assertEquals(
+            listOf(1),
+            t.frames.filter { it.cmd == Cmd.TIMER && it.type == Frame.TYPE_WRITE }.map { it.payload[0].toInt() },
+        )
+    }
+
+    @Test
     fun `timer state changes instantly and reverts when scale rejects`() = runTest {
         val t = FakeBleTransport()
         val (s, _) = session(t, ScaleModel.BASIC3)

@@ -27,6 +27,8 @@ data class AppSettings(
     val triggerOnPress: Boolean = true,
     /** Не гасить экран, пока открыт главный экран. */
     val keepScreenOn: Boolean = true,
+    /** Показывать таймер весов вместо собственного секундомера приложения. */
+    val syncTimerWithScale: Boolean = false,
 )
 
 interface AppSettingsStore {
@@ -35,6 +37,7 @@ interface AppSettingsStore {
     suspend fun setBeepNote(note: BeepNote)
     suspend fun setTriggerOnPress(onPress: Boolean)
     suspend fun setKeepScreenOn(keep: Boolean)
+    suspend fun setSyncTimerWithScale(sync: Boolean)
 }
 
 class DataStoreAppSettingsStore(context: Context) : AppSettingsStore {
@@ -46,6 +49,7 @@ class DataStoreAppSettingsStore(context: Context) : AppSettingsStore {
             beepNote = BeepNote.fromName(p[BEEP_NOTE]),
             triggerOnPress = p[TRIGGER_ON_PRESS] ?: true,
             keepScreenOn = p[KEEP_SCREEN_ON] ?: true,
+            syncTimerWithScale = p[SYNC_TIMER] ?: false,
         )
     }
 
@@ -65,11 +69,16 @@ class DataStoreAppSettingsStore(context: Context) : AppSettingsStore {
         store.edit { it[KEEP_SCREEN_ON] = keep }
     }
 
+    override suspend fun setSyncTimerWithScale(sync: Boolean) {
+        store.edit { it[SYNC_TIMER] = sync }
+    }
+
     private companion object {
         val BEEP_ENABLED = booleanPreferencesKey("beep_enabled")
         val BEEP_NOTE = stringPreferencesKey("beep_note")
         val TRIGGER_ON_PRESS = booleanPreferencesKey("trigger_on_press")
         val KEEP_SCREEN_ON = booleanPreferencesKey("keep_screen_on")
+        val SYNC_TIMER = booleanPreferencesKey("timer_sync")
     }
 }
 
@@ -92,5 +101,9 @@ class InMemoryAppSettingsStore(initial: AppSettings = AppSettings()) : AppSettin
 
     override suspend fun setKeepScreenOn(keep: Boolean) {
         state.value = state.value.copy(keepScreenOn = keep)
+    }
+
+    override suspend fun setSyncTimerWithScale(sync: Boolean) {
+        state.value = state.value.copy(syncTimerWithScale = sync)
     }
 }

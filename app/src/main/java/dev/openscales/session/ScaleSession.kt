@@ -29,7 +29,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
@@ -62,7 +61,6 @@ class ScaleSession(
     @Volatile private var legacy = false
     @Volatile private var protocolDataSeen = false
     @Volatile private var pendingEndReason: EndReason? = null
-    private var legacyTimerJob: Job? = null
 
     val isLegacy: Boolean get() = legacy
 
@@ -304,7 +302,13 @@ class ScaleSession(
 
     suspend fun resetTimer() = timer(TimerState.RESET)
 
-    private suspend fun timer(target: TimerState) {
+    /**
+     * Команда таймера весам. Секундомер ведёт приложение, поэтому по умолчанию ([awaitAck] = false)
+     * команда уходит без подтверждения: её результат на показания не влияет, а лишний раунд-трип
+     * задерживает следующую команду. С [awaitAck] = true состояние сессии переключается оптимистично
+     * и откатывается при отказе — этого ждёт режим синхронизации с весами.
+     */
+    suspend fun timer(target: TimerState, awaitAck: Boolean = true) {
         requireReady()
         if (legacy) {
             val cmd = when (target) {
@@ -312,8 +316,10 @@ class ScaleSession(
                 TimerState.PAUSED -> LegacyCmd.PAUSE_TIMER
                 TimerState.RESET -> LegacyCmd.RESET_TIMER
             }
-            legacyWrite(LegacyCodec.command(cmd))
-            runLegacyTimer(target)
+            return legacyWrite(LegacyCodec.command(cmd))
+        }
+        if (!awaitAck) {
+            queue.write(Cmd.TIMER, byteArrayOf(target.code.toByte()), CommandQueue.Coalesce.TIMER, awaitAck = false)
             return
         }
         // Оптимистично: интерфейс меняется в момент нажатия, не дожидаясь BLE-обмена (~0.3–0.6 с).
@@ -334,22 +340,6 @@ class ScaleSession(
     private fun applyTimerState(target: TimerState) {
         _state.update {
             it.copy(timerState = target, timeSeconds = if (target == TimerState.RESET) 0 else it.timeSeconds)
-        }
-    }
-
-    /** TES08 не присылает время — таймер ведёт приложение. */
-    private fun runLegacyTimer(target: TimerState) {
-        legacyTimerJob?.cancel()
-        _state.update {
-            it.copy(timerState = target, timeSeconds = if (target == TimerState.RESET) 0 else it.timeSeconds)
-        }
-        if (target == TimerState.RUNNING) {
-            legacyTimerJob = scope.launch {
-                while (isActive) {
-                    delay(1_000)
-                    _state.update { it.copy(timeSeconds = it.timeSeconds + 1) }
-                }
-            }
         }
     }
 
@@ -467,7 +457,6 @@ class ScaleSession(
         if (!ended.complete(reason)) return
         val finalPhase = if (reason == EndReason.FAILED) ConnectionPhase.FAILED else phase
         _state.update { it.copy(phase = finalPhase, error = error, flowRate = 0f) }
-        legacyTimerJob?.cancel()
         queue.close()
         transport.close()
         scope.cancel()
