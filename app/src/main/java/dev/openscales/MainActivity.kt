@@ -48,7 +48,9 @@ class MainActivity : ComponentActivity() {
                 // чтобы пользователь не видел результат давно истёкшего таймаута.
                 LifecycleEventEffect(Lifecycle.Event.ON_START) {
                     if (prerequisite.value == BlePrerequisite.OK) viewModel.autoConnect()
+                    viewModel.setDashboardVisible(true)
                 }
+                LifecycleEventEffect(Lifecycle.Event.ON_STOP) { viewModel.setDashboardVisible(false) }
                 LaunchedEffect(prerequisite.value) {
                     if (prerequisite.value == BlePrerequisite.OK) viewModel.autoConnect()
                 }

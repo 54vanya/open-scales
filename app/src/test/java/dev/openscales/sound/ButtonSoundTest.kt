@@ -6,6 +6,7 @@ import dev.openscales.data.InMemoryAppSettingsStore
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import kotlin.math.abs
@@ -14,7 +15,9 @@ class ButtonSoundTest {
 
     private class RecordingBeeper : Beeper {
         val played = mutableListOf<BeepNote>()
+        var warm = false
         override fun beep(note: BeepNote) { played += note }
+        override fun warm(on: Boolean) { warm = on }
     }
 
     @Test
@@ -41,6 +44,45 @@ class ButtonSoundTest {
         sound.onControlPressed()
         sound.preview(BeepNote.C6)
         assertTrue(beeper.played.isEmpty())
+    }
+
+    @Test
+    fun `warm-up follows the dashboard and the sound setting`() = runTest {
+        val store = InMemoryAppSettingsStore()
+        val beeper = RecordingBeeper()
+        val sound = ButtonSound(backgroundScope, store, beeper)
+        runCurrent()
+        assertFalse(beeper.warm) // главный экран ещё не открыт
+
+        sound.setDashboardVisible(true)
+        assertTrue(beeper.warm)
+
+        store.setBeepEnabled(false)
+        runCurrent()
+        assertFalse(beeper.warm) // звук выключен — держать тракт незачем
+
+        store.setBeepEnabled(true)
+        runCurrent()
+        assertTrue(beeper.warm)
+
+        sound.setDashboardVisible(false)
+        assertFalse(beeper.warm)
+    }
+
+    @Test
+    fun `warm-up survives screen recreation`() = runTest {
+        val beeper = RecordingBeeper()
+        val sound = ButtonSound(backgroundScope, InMemoryAppSettingsStore(), beeper)
+        runCurrent()
+        sound.setDashboardVisible(true)
+
+        // Пересоздание экрана: новый экземпляр стартовал, старый только потом остановился.
+        sound.setDashboardVisible(true)
+        sound.setDashboardVisible(false)
+        assertTrue(beeper.warm)
+
+        sound.setDashboardVisible(false)
+        assertFalse(beeper.warm)
     }
 
     @Test

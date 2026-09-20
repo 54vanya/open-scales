@@ -39,6 +39,9 @@ class ScaleViewModel(application: Application) : AndroidViewModel(application) {
 
     val appSettings: StateFlow<AppSettings> get() = app.buttonSound.settings
 
+    /** Главный экран на виду: пока он открыт, звуковой тракт держим готовым. */
+    fun setDashboardVisible(visible: Boolean) = app.buttonSound.setDashboardVisible(visible)
+
     // Сигнал — до команды: звук не ждёт BLE-обмена.
     fun tare() {
         app.buttonSound.onControlPressed()

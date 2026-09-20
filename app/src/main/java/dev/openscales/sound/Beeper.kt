@@ -8,6 +8,9 @@ import dev.openscales.data.BeepNote
 
 fun interface Beeper {
     fun beep(note: BeepNote)
+
+    /** Держать аудиовыход готовым к воспроизведению (или отпустить его). */
+    fun warm(on: Boolean) {}
 }
 
 /**
@@ -19,10 +22,37 @@ fun interface Beeper {
 class AudioTrackBeeper : Beeper {
     private var track: AudioTrack? = null
     private var trackNote: BeepNote? = null
+    private var silence: AudioTrack? = null
 
     /** Заранее подготовить трек, чтобы первое нажатие не ждало его создания. */
     fun prepare(note: BeepNote) {
         if (trackNote != note) rebuild(note)
+    }
+
+    /**
+     * Аудиовыход уходит в standby через три секунды тишины, а между нажатиями кнопок пауза всегда больше,
+     * поэтому иначе каждый «пик» платит за холодный старт тракта. Держим его беззвучным зацикленным треком.
+     */
+    override fun warm(on: Boolean) {
+        if (!on) return stopWarmUp()
+        if (silence != null) return
+        val frames = BeepPcm.SAMPLE_RATE * WARM_UP_MS / 1000
+        silence = runCatching {
+            newTrack(frames).also {
+                it.write(ShortArray(frames), 0, frames)
+                it.setVolume(0f)
+                it.setLoopPoints(0, frames, -1)
+                it.play()
+            }
+        }.onFailure { Log.w(TAG, "warm-up failed", it) }.getOrNull()
+    }
+
+    private fun stopWarmUp() {
+        silence?.let {
+            runCatching { it.stop() }
+            it.release()
+        }
+        silence = null
     }
 
     override fun beep(note: BeepNote) {
@@ -35,40 +65,48 @@ class AudioTrackBeeper : Beeper {
         }.onFailure { Log.w(TAG, "beep failed", it) }
     }
 
+    /** Оба трека освобождаются здесь: и сигнал, и удержание тракта. */
     fun release() {
+        stopWarmUp()
         track?.release()
         track = null
         trackNote = null
     }
 
     private fun rebuild(note: BeepNote) {
+        val warm = silence != null
         release()
         val pcm = BeepPcm.generate(note.hz)
         track = runCatching {
-            AudioTrack.Builder()
-                .setAudioAttributes(
-                    AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                        .build(),
-                )
-                .setAudioFormat(
-                    AudioFormat.Builder()
-                        .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-                        .setSampleRate(BeepPcm.SAMPLE_RATE)
-                        .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
-                        .build(),
-                )
-                .setTransferMode(AudioTrack.MODE_STATIC)
-                .setBufferSizeInBytes(pcm.size * 2)
-                .setPerformanceMode(AudioTrack.PERFORMANCE_MODE_LOW_LATENCY)
-                .build()
-                .also { it.write(pcm, 0, pcm.size) }
+            newTrack(pcm.size).also { it.write(pcm, 0, pcm.size) }
         }.onFailure { Log.w(TAG, "AudioTrack init failed", it) }.getOrNull()
         trackNote = note.takeIf { track != null }
+        if (warm) warm(true)
     }
+
+    private fun newTrack(frames: Int): AudioTrack = AudioTrack.Builder()
+        .setAudioAttributes(
+            AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build(),
+        )
+        .setAudioFormat(
+            AudioFormat.Builder()
+                .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                .setSampleRate(BeepPcm.SAMPLE_RATE)
+                .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                .build(),
+        )
+        .setTransferMode(AudioTrack.MODE_STATIC)
+        .setBufferSizeInBytes(frames * 2)
+        .setPerformanceMode(AudioTrack.PERFORMANCE_MODE_LOW_LATENCY)
+        .build()
 
     private companion object {
         const val TAG = "Beeper"
+
+        /** Длина буфера тишины: кратна 10 мс — периоду вывода у типичного HAL. */
+        const val WARM_UP_MS = 100
     }
 }

@@ -1,6 +1,5 @@
 package dev.openscales.ui.dashboard
 
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -409,13 +408,12 @@ private fun ControlButtons(
                     interactionSource = timerInteraction,
                     modifier = Modifier.weight(1.3f).heightIn(min = height).animateWidth(timerInteraction),
                 ) {
-                    AnimatedContent(targetState = timerRunning, label = "timer-button") { running ->
-                        ButtonLabel(
-                            if (running) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
-                            stringResource(if (running) R.string.pause else R.string.start),
-                            height,
-                        )
-                    }
+                    // Без переходной анимации: плавная смена вида читается как задержка кнопки.
+                    ButtonLabel(
+                        if (timerRunning) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                        stringResource(if (timerRunning) R.string.pause else R.string.start),
+                        height,
+                    )
                 }
             },
             menuContent = {},
