@@ -176,6 +176,25 @@ class ScaleSessionTest {
     }
 
     @Test
+    fun `reset is not sent when the scale timer is already at zero`() = runTest {
+        val t = FakeBleTransport()
+        val (s, _) = session(t, ScaleModel.BASIC3)
+        s.start()
+        settle()
+        val writes = { t.frames.count { it.cmd == Cmd.TIMER && it.type == Frame.TYPE_WRITE } }
+
+        // Весы сообщили нулевой таймер при подключении: сбрасывать нечего, а команда означала бы тару.
+        s.timer(TimerState.RESET, awaitAck = false)
+        assertEquals(0, writes())
+
+        // Пришёл кадр веса с ненулевым временем — теперь сброс осмыслен.
+        t.emitFrame(Frame.TYPE_READ, Cmd.WEIGHT, byteArrayOf(0, 0, 0, 0, 0, 0, 0, 75))
+        runCurrent()
+        s.timer(TimerState.RESET, awaitAck = false)
+        assertEquals(1, writes())
+    }
+
+    @Test
     fun `timer state changes instantly and reverts when scale rejects`() = runTest {
         val t = FakeBleTransport()
         val (s, _) = session(t, ScaleModel.BASIC3)

@@ -284,6 +284,27 @@ class ScaleRepositoryTest {
     }
 
     @Test
+    fun `reset zeroes the app timer without touching the scale`() = runTest {
+        val env = Env(this, basic3)
+        runCurrent()
+        env.repository.autoConnect()
+        settle()
+        env.repository.toggleTimer()
+        advanceTimeBy(5_000)
+        runCurrent()
+
+        env.repository.resetTimer()
+        settle()
+        assertEquals(TimerState.RESET, env.repository.state.value.timerState)
+        assertEquals(0, env.repository.state.value.timeSeconds)
+        // Весы своего времени не присылали, сбрасывать им нечего — команда сброса не ушла.
+        val resets = env.transports.last().frames.count {
+            it.cmd == Cmd.TIMER && it.type == Frame.TYPE_WRITE && it.payload[0].toInt() == 3
+        }
+        assertEquals(0, resets)
+    }
+
+    @Test
     fun `rejected timer command does not stop the stopwatch`() = runTest {
         val env = Env(this, basic3)
         env.configure = { it.rejectedWrites += Cmd.TIMER }

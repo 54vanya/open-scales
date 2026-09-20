@@ -318,6 +318,9 @@ class ScaleSession(
             }
             return legacyWrite(LegacyCodec.command(cmd))
         }
+        // Сброс при уже нулевом таймере весы понимают как тару и обнуляют вес (проверено на DOT):
+        // сбрасывать им нечего, а тару делает только кнопка «Тара».
+        if (target == TimerState.RESET && !scaleTimerHasSomethingToReset()) return
         if (!awaitAck) {
             queue.write(Cmd.TIMER, byteArrayOf(target.code.toByte()), CommandQueue.Coalesce.TIMER, awaitAck = false)
             return
@@ -335,6 +338,11 @@ class ScaleSession(
         }
         // Как оригинал, сверяем состояние с весами, но не задерживаем вызывающего.
         scope.launch { optionalRead(Cmd.TIMER) }
+    }
+
+    private fun scaleTimerHasSomethingToReset(): Boolean {
+        val state = _state.value
+        return state.timerState == TimerState.RUNNING || state.timeSeconds > 0
     }
 
     private fun applyTimerState(target: TimerState) {

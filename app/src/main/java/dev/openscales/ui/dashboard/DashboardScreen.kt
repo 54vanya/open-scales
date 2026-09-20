@@ -1,6 +1,8 @@
 package dev.openscales.ui.dashboard
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -48,8 +50,6 @@ import androidx.compose.runtime.Composable
 import java.util.concurrent.atomic.AtomicBoolean
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.text.rememberTextMeasurer
@@ -59,6 +59,8 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -376,9 +378,9 @@ private fun ControlButtons(
     val timerInteraction = remember { MutableInteractionSource() }
     val resetInteraction = remember { MutableInteractionSource() }
     // По умолчанию как физические кнопки весов: срабатывают в момент касания (настраивается).
-    val tare = rememberPressAction(tareInteraction, tareEnabled && triggerOnPress, onTare)
-    val toggleTimer = rememberPressAction(timerInteraction, triggerOnPress, onToggleTimer)
-    val resetTimer = rememberPressAction(resetInteraction, triggerOnPress, onResetTimer)
+    val tare = rememberPressAction(tareEnabled && triggerOnPress, onTare)
+    val toggleTimer = rememberPressAction(triggerOnPress, onToggleTimer)
+    val resetTimer = rememberPressAction(triggerOnPress, onResetTimer)
     ButtonGroup(
         overflowIndicator = { ButtonGroupDefaults.OverflowIndicator(it) },
         modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
@@ -387,12 +389,12 @@ private fun ControlButtons(
         customItem(
             buttonGroupContent = {
                 FilledTonalButton(
-                    onClick = tare,
+                    onClick = tare.onClick,
                     enabled = tareEnabled,
                     shapes = ButtonDefaults.shapesFor(height),
                     contentPadding = ControlButtonPadding,
                     interactionSource = tareInteraction,
-                    modifier = Modifier.weight(1f).heightIn(min = height).animateWidth(tareInteraction),
+                    modifier = Modifier.weight(1f).heightIn(min = height).animateWidth(tareInteraction).then(tare.modifier),
                 ) {
                     ButtonLabel(Icons.Rounded.VerticalAlignBottom, stringResource(R.string.tare), height)
                 }
@@ -402,11 +404,12 @@ private fun ControlButtons(
         customItem(
             buttonGroupContent = {
                 Button(
-                    onClick = toggleTimer,
+                    onClick = toggleTimer.onClick,
                     shapes = ButtonDefaults.shapesFor(height),
                     contentPadding = ControlButtonPadding,
                     interactionSource = timerInteraction,
-                    modifier = Modifier.weight(1.3f).heightIn(min = height).animateWidth(timerInteraction),
+                    modifier = Modifier.weight(1.3f).heightIn(min = height).animateWidth(timerInteraction)
+                        .then(toggleTimer.modifier),
                 ) {
                     // Без переходной анимации: плавная смена вида читается как задержка кнопки.
                     ButtonLabel(
@@ -421,11 +424,11 @@ private fun ControlButtons(
         customItem(
             buttonGroupContent = {
                 OutlinedButton(
-                    onClick = resetTimer,
+                    onClick = resetTimer.onClick,
                     shapes = ButtonDefaults.shapesFor(height),
                     contentPadding = ControlButtonPadding,
                     interactionSource = resetInteraction,
-                    modifier = Modifier.weight(1f).heightIn(min = height).animateWidth(resetInteraction),
+                    modifier = Modifier.weight(1f).heightIn(min = height).animateWidth(resetInteraction).then(resetTimer.modifier),
                 ) {
                     ButtonLabel(Icons.Rounded.RestartAlt, stringResource(R.string.reset), height)
                 }
@@ -435,32 +438,46 @@ private fun ControlButtons(
     }
 }
 
+/** Кнопка, срабатывающая по касанию: [modifier] ловит касание, [onClick] остаётся для TalkBack и клавиатуры. */
+private class PressAction(val onClick: () -> Unit, val modifier: Modifier)
+
 /**
- * Действие по касанию: срабатывает на [PressInteraction.Press]. Возвращаемый колбэк передаётся в `onClick`
- * и нужен для случаев без касания (TalkBack, клавиатура): если действие уже выполнено касанием,
- * `onClick` после отпускания его не повторяет.
+ * Действие по касанию выполняется прямо в обработке касания, на проходе [PointerEventPass.Initial]:
+ * так оно заведомо раньше `onClick`, и короткое касание не отправляет команду дважды. Событие не
+ * поглощается, поэтому рябь и обычный `onClick` работают как прежде.
+ *
+ * [PressAction.onClick] нужен для активации без касания (TalkBack, клавиатура): если действие уже
+ * выполнено касанием, он его не повторяет. Жест, закончившийся не отпусканием над кнопкой, снимает
+ * признак — иначе он «съел» бы следующую активацию.
  */
 @Composable
-private fun rememberPressAction(
-    interactionSource: MutableInteractionSource,
-    enabled: Boolean,
-    action: () -> Unit,
-): () -> Unit {
+private fun rememberPressAction(enabled: Boolean, action: () -> Unit): PressAction {
     val currentAction by rememberUpdatedState(action)
     val handledByPress = remember { AtomicBoolean(false) }
-    LaunchedEffect(interactionSource, enabled) {
-        interactionSource.interactions.collect { interaction ->
-            when (interaction) {
-                is PressInteraction.Press -> if (enabled) {
-                    handledByPress.set(true)
-                    currentAction()
+    val modifier = if (!enabled) {
+        Modifier
+    } else {
+        Modifier.pointerInput(Unit) {
+            awaitEachGesture {
+                val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                handledByPress.set(true)
+                currentAction()
+                // Смотрим сырые события: кнопка поглощает отпускание, и готовые помощники
+                // (`waitForUpOrCancellation`) приняли бы это за отмену жеста.
+                var last = down
+                while (last.pressed) {
+                    val event = awaitPointerEvent(PointerEventPass.Final)
+                    last = event.changes.firstOrNull { it.id == down.id } ?: break
                 }
-                // Палец увели с кнопки — onClick не будет, сбрасываем флаг.
-                is PressInteraction.Cancel -> handledByPress.set(false)
+                val inside = last.position.x in 0f..size.width.toFloat() &&
+                    last.position.y in 0f..size.height.toFloat()
+                // Палец ушёл с кнопки — `onClick` не придёт, и признак не должен съесть следующее нажатие.
+                if (!inside) handledByPress.set(false)
             }
         }
     }
-    return remember { { if (!handledByPress.getAndSet(false)) currentAction() } }
+    val onClick = remember { { if (!handledByPress.getAndSet(false)) currentAction() } }
+    return PressAction(onClick, modifier)
 }
 
 @Composable
