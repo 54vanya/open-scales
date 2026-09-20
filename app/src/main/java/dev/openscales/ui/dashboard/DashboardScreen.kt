@@ -68,6 +68,7 @@ import androidx.compose.ui.unit.dp
 import dev.openscales.R
 import dev.openscales.protocol.ScaleModel
 import dev.openscales.protocol.TimerState
+import dev.openscales.protocol.WeightUnit
 import dev.openscales.session.ConnectionPhase
 import dev.openscales.session.ScaleState
 import dev.openscales.ui.components.TIMER_WIDTH_TEMPLATE
@@ -192,13 +193,13 @@ private fun ScaleDisplay(state: ScaleState, modifier: Modifier = Modifier) {
                 }
             }
             // Таймер, вес и поток — одной группой по центру карточки.
-            ReadoutArea(Modifier.fillMaxWidth().weight(1f)) { style ->
-                TimerReadout(state.timeSeconds, style)
+            ReadoutArea(Modifier.fillMaxWidth().weight(1f)) { styles ->
+                TimerReadout(state.timeSeconds, styles.main)
                 Spacer(Modifier.height(ReadoutGap))
                 Row(verticalAlignment = Alignment.Bottom) {
                     Text(
                         formatWeight(state.weight.takeIf { state.isReady }, state.unit),
-                        style = style,
+                        style = styles.main,
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
                     )
@@ -206,7 +207,7 @@ private fun ScaleDisplay(state: ScaleState, modifier: Modifier = Modifier) {
                         state.unit.symbol,
                         style = UnitTextStyle,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(start = UnitGap, bottom = 16.dp),
+                        modifier = Modifier.padding(start = UnitGap, bottom = UnitBaselineGap),
                     )
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -221,13 +222,13 @@ private fun ScaleDisplay(state: ScaleState, modifier: Modifier = Modifier) {
                                 state.flowRate.takeIf { state.isReady && !state.model.isLegacy() },
                                 state.unit,
                             ),
-                            style = DigitsTextStyle,
+                            style = styles.flowDigits,
                             color = MaterialTheme.colorScheme.onSurface,
                             maxLines = 1,
                         )
                         Text(
                             stringResource(R.string.flow_rate_unit, state.unit.symbol),
-                            style = UnitTextStyle,
+                            style = styles.flowUnit,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(start = UnitGap),
                         )
@@ -261,41 +262,69 @@ private fun TimerReadout(seconds: Int, style: TextStyle) {
 private const val WEIGHT_WIDTH_TEMPLATE = "0000.0"
 private val UnitGap = 8.dp
 private val ReadoutGap = 8.dp
-private val FlowReserve = 56.dp
-private val UnitReserve = 40.dp
-private val LabelReserve = 24.dp
+
+/** Отступ единицы веса от низа: цифры выше, единица прижата к их базовой линии. */
+private val UnitBaselineGap = 16.dp
+
+/** Стили группы: [main] — таймер и вес, [flowDigits] и [flowUnit] — строка потока. */
+private class ReadoutStyles(val main: TextStyle, val flowDigits: TextStyle, val flowUnit: TextStyle)
 
 /**
  * Группа таймера, веса и потока по центру. Таймер и вес показаны одним стилем [WeightTextStyle],
  * уменьшенным ровно настолько, чтобы обе строки, подписи и строка потока поместились по высоте,
- * а самые широкие значения (`00:00`, `0000.0 g`) — по ширине.
+ * а самые широкие значения (`00:00`, `0000.0 oz`) — по ширине.
+ *
+ * Все резервы меряются по их же стилям, а не задаются в dp: подписи и поток заданы в sp и растут
+ * вместе с системным масштабом шрифта, и по фиксированному резерву их выдавливало бы за край карточки.
  */
 @Composable
-private fun ReadoutArea(modifier: Modifier, content: @Composable ColumnScope.(TextStyle) -> Unit) {
+private fun ReadoutArea(modifier: Modifier, content: @Composable ColumnScope.(ReadoutStyles) -> Unit) {
     BoxWithConstraints(modifier) {
         val measurer = rememberTextMeasurer()
         val density = LocalDensity.current
-        val base = WeightTextStyle
-        val scale = remember(constraints, density) {
+        val labelStyle = MaterialTheme.typography.labelLarge
+        // Меряем по самой широкой единице, чтобы размер не прыгал при смене г/унций.
+        val widestUnit = WeightUnit.entries.maxBy { it.symbol.length }.symbol
+        val flowUnitText = stringResource(R.string.flow_rate_unit, widestUnit)
+        val styles = remember(constraints, density, labelStyle, flowUnitText) {
+            val base = WeightTextStyle
+            val unitGap = with(density) { UnitGap.toPx() }
             val timer = measurer.measure(TIMER_WIDTH_TEMPLATE, base).size
-            val weight = measurer.measure(WEIGHT_WIDTH_TEMPLATE, base).size.width +
-                with(density) { (UnitGap + UnitReserve).roundToPx() }
-            val widest = maxOf(timer.width, weight).toFloat()
-            // Высота группы за вычетом подписей, отступа и строки потока — делится между таймером и весом.
-            val reserved = with(density) { (LabelReserve * 2 + ReadoutGap + FlowReserve).toPx() }
-            val rowHeight = (constraints.maxHeight - reserved) / 2f
-            minOf(1f, constraints.maxWidth / widest, rowHeight / timer.height).coerceAtLeast(0.3f)
+            val unit = measurer.measure(widestUnit, UnitTextStyle).size
+            val weightWidth = measurer.measure(WEIGHT_WIDTH_TEMPLATE, base).size.width + unitGap + unit.width
+            val widest = maxOf(timer.width.toFloat(), weightWidth)
+
+            // Поток живёт в своём размере и ужимается, только если не влезает по ширине.
+            val flowDigits = measurer.measure(WEIGHT_WIDTH_TEMPLATE, DigitsTextStyle).size
+            val flowWidth = flowDigits.width + unitGap + measurer.measure(flowUnitText, UnitTextStyle).size.width
+            val flowScale = minOf(1f, constraints.maxWidth / flowWidth)
+
+            // Остаток высоты (без двух подписей, отступа и потока) делится между таймером и весом;
+            // строка веса не ниже единицы с её отступом от базовой линии.
+            val labels = measurer.measure("0", labelStyle).size.height * 2
+            val flowHeight = maxOf(flowDigits.height, unit.height) * flowScale
+            val free = constraints.maxHeight - labels - flowHeight - with(density) { ReadoutGap.toPx() }
+            val unitRow = unit.height + with(density) { UnitBaselineGap.toPx() }
+            val rowHeight = if (free / 2f >= unitRow) free / 2f else free - unitRow
+            val scale = minOf(1f, constraints.maxWidth / widest, rowHeight / timer.height).coerceAtLeast(0.3f)
+            ReadoutStyles(
+                main = base.scaledBy(scale),
+                flowDigits = DigitsTextStyle.scaledBy(flowScale),
+                flowUnit = UnitTextStyle.scaledBy(flowScale),
+            )
         }
-        val style = base.copy(fontSize = base.fontSize * scale, lineHeight = base.lineHeight * scale)
         Column(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            content(style)
+            content(styles)
         }
     }
 }
+
+private fun TextStyle.scaledBy(factor: Float) =
+    if (factor >= 1f) this else copy(fontSize = fontSize * factor, lineHeight = lineHeight * factor)
 
 private fun ScaleModel.isLegacy() = this == ScaleModel.OLD_DOUBLE
 
@@ -463,6 +492,24 @@ private fun DashboardReadyPreview() {
                 timerState = TimerState.RUNNING,
                 batteryPercent = 64,
                 address = "AA:BB",
+            ),
+            hasSavedDevice = true,
+            snackbarHostState = SnackbarHostState(),
+            onTare = {}, onToggleTimer = {}, onResetTimer = {}, onConnect = {}, onOpenScan = {}, onOpenSettings = {},
+        )
+    }
+}
+
+/** Самый тесный случай: узкий экран и системный шрифт «Самый крупный». */
+@Preview(showBackground = true, widthDp = 320, heightDp = 640, fontScale = 2f)
+@Composable
+private fun DashboardLargeFontPreview() {
+    OpenScalesTheme(dynamicColor = false) {
+        DashboardScreen(
+            state = ScaleState(
+                phase = ConnectionPhase.READY, name = "TIMEMORE_Dot", model = ScaleModel.DOT,
+                weight = 1999.9f, flowRate = 2.4f, timeSeconds = 600, timerState = TimerState.RUNNING,
+                batteryPercent = 89, address = "AA",
             ),
             hasSavedDevice = true,
             snackbarHostState = SnackbarHostState(),

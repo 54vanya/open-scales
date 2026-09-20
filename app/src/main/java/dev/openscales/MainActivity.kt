@@ -55,7 +55,8 @@ class MainActivity : ComponentActivity() {
                 LaunchedEffect(Unit) { viewModel.errors.collect { snackbar.showSnackbar(it) } }
 
                 // Пока открыт главный экран, системный таймаут бездействия не гасит экран.
-                // Флаг живёт столько же, сколько композиция экрана: уход с него снимает удержание.
+                // Флаг снимается при выходе из композиции, но на другие экраны она не диспозится:
+                // там удержание кончается само — система игнорирует флаг у невидимого окна.
                 val view = LocalView.current
                 DisposableEffect(view, appSettings.keepScreenOn) {
                     view.keepScreenOn = appSettings.keepScreenOn
