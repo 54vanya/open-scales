@@ -21,7 +21,10 @@ class BeepNoteTest {
 
     @Test
     fun `defaults are enabled A6 and unknown name falls back to A6`() {
-        assertEquals(AppSettings(beepEnabled = true, beepNote = BeepNote.A6, triggerOnPress = true), AppSettings())
+        assertEquals(
+            AppSettings(beepEnabled = true, beepNote = BeepNote.A6, triggerOnPress = true, keepScreenOn = true),
+            AppSettings(),
+        )
         assertEquals(BeepNote.A6, BeepNote.fromName("H7"))
         assertEquals(BeepNote.A6, BeepNote.fromName(null))
         assertEquals(BeepNote.G6, BeepNote.fromName("G6"))

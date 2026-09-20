@@ -59,6 +59,10 @@ class ScaleViewModel(application: Application) : AndroidViewModel(application) {
         app.appScope.launch { app.appSettingsStore.setBeepEnabled(enabled) }
     }
 
+    fun setKeepScreenOn(keep: Boolean) {
+        app.appScope.launch { app.appSettingsStore.setKeepScreenOn(keep) }
+    }
+
     fun setTriggerOnPress(onPress: Boolean) {
         app.appScope.launch { app.appSettingsStore.setTriggerOnPress(onPress) }
     }

@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -74,6 +75,7 @@ import dev.openscales.ui.components.formatTime
 import dev.openscales.ui.components.formatWeight
 import dev.openscales.ui.components.labelRes
 import dev.openscales.ui.theme.DigitsTextStyle
+import dev.openscales.ui.theme.UnitTextStyle
 import dev.openscales.ui.theme.OpenScalesTheme
 import dev.openscales.ui.theme.WeightTextStyle
 
@@ -189,35 +191,49 @@ private fun ScaleDisplay(state: ScaleState, modifier: Modifier = Modifier) {
                     )
                 }
             }
+            // Таймер, вес и поток — одной группой по центру карточки.
             ReadoutArea(Modifier.fillMaxWidth().weight(1f)) { style ->
-                Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
-                    TimerReadout(state.timeSeconds, style)
+                TimerReadout(state.timeSeconds, style)
+                Spacer(Modifier.height(ReadoutGap))
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Text(
+                        formatWeight(state.weight.takeIf { state.isReady }, state.unit),
+                        style = style,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                    )
+                    Text(
+                        state.unit.symbol,
+                        style = UnitTextStyle,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(start = UnitGap, bottom = 16.dp),
+                    )
                 }
-                Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        stringResource(R.string.flow_rate),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                     Row(verticalAlignment = Alignment.Bottom) {
                         Text(
-                            formatWeight(state.weight.takeIf { state.isReady }, state.unit),
-                            style = style,
+                            formatWeight(
+                                state.flowRate.takeIf { state.isReady && !state.model.isLegacy() },
+                                state.unit,
+                            ),
+                            style = DigitsTextStyle,
                             color = MaterialTheme.colorScheme.onSurface,
                             maxLines = 1,
                         )
                         Text(
-                            state.unit.symbol,
-                            style = MaterialTheme.typography.headlineMedium,
+                            stringResource(R.string.flow_rate_unit, state.unit.symbol),
+                            style = UnitTextStyle,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(start = UnitGap, bottom = 16.dp),
+                            modifier = Modifier.padding(start = UnitGap),
                         )
                     }
                 }
             }
-            Metric(
-                label = stringResource(R.string.flow_rate),
-                value = stringResource(
-                    R.string.flow_rate_value,
-                    formatWeight(state.flowRate.takeIf { state.isReady && !state.model.isLegacy() }, state.unit),
-                    state.unit.symbol,
-                ),
-            )
         }
     }
 }
@@ -244,13 +260,15 @@ private fun TimerReadout(seconds: Int, style: TextStyle) {
 /** Самый широкий вес, под который считаем масштаб (DOT/Basic 3 — до 2 кг). */
 private const val WEIGHT_WIDTH_TEMPLATE = "0000.0"
 private val UnitGap = 8.dp
+private val ReadoutGap = 8.dp
+private val FlowReserve = 56.dp
 private val UnitReserve = 40.dp
 private val LabelReserve = 24.dp
 
 /**
- * Область таймера и веса. Оба показаны одним стилем [WeightTextStyle], уменьшенным ровно настолько,
- * чтобы две строки и самые широкие значения (`00:00`, `0000.0 g`) поместились — на маленьких экранах
- * они уменьшаются вместе и остаются одного размера.
+ * Группа таймера, веса и потока по центру. Таймер и вес показаны одним стилем [WeightTextStyle],
+ * уменьшенным ровно настолько, чтобы обе строки, подписи и строка потока поместились по высоте,
+ * а самые широкие значения (`00:00`, `0000.0 g`) — по ширине.
  */
 @Composable
 private fun ReadoutArea(modifier: Modifier, content: @Composable ColumnScope.(TextStyle) -> Unit) {
@@ -263,23 +281,23 @@ private fun ReadoutArea(modifier: Modifier, content: @Composable ColumnScope.(Te
             val weight = measurer.measure(WEIGHT_WIDTH_TEMPLATE, base).size.width +
                 with(density) { (UnitGap + UnitReserve).roundToPx() }
             val widest = maxOf(timer.width, weight).toFloat()
-            val rowHeight = constraints.maxHeight / 2f - with(density) { LabelReserve.toPx() }
+            // Высота группы за вычетом подписей, отступа и строки потока — делится между таймером и весом.
+            val reserved = with(density) { (LabelReserve * 2 + ReadoutGap + FlowReserve).toPx() }
+            val rowHeight = (constraints.maxHeight - reserved) / 2f
             minOf(1f, constraints.maxWidth / widest, rowHeight / timer.height).coerceAtLeast(0.3f)
         }
         val style = base.copy(fontSize = base.fontSize * scale, lineHeight = base.lineHeight * scale)
-        Column(Modifier.fillMaxSize()) { content(style) }
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            content(style)
+        }
     }
 }
 
 private fun ScaleModel.isLegacy() = this == ScaleModel.OLD_DOUBLE
-
-@Composable
-private fun Metric(label: String, value: String) {
-    Column {
-        Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(value, style = DigitsTextStyle, color = MaterialTheme.colorScheme.onSurface)
-    }
-}
 
 @Composable
 private fun ConnectBanner(
@@ -441,7 +459,7 @@ private fun DashboardReadyPreview() {
                 model = ScaleModel.BASIC3,
                 weight = 18.3f,
                 flowRate = 2.4f,
-                timeSeconds = 75,
+                timeSeconds = 615,
                 timerState = TimerState.RUNNING,
                 batteryPercent = 64,
                 address = "AA:BB",

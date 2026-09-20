@@ -8,9 +8,11 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -51,6 +53,14 @@ class MainActivity : ComponentActivity() {
                     if (prerequisite.value == BlePrerequisite.OK) viewModel.autoConnect()
                 }
                 LaunchedEffect(Unit) { viewModel.errors.collect { snackbar.showSnackbar(it) } }
+
+                // Пока открыт главный экран, системный таймаут бездействия не гасит экран.
+                // Флаг живёт столько же, сколько композиция экрана: уход с него снимает удержание.
+                val view = LocalView.current
+                DisposableEffect(view, appSettings.keepScreenOn) {
+                    view.keepScreenOn = appSettings.keepScreenOn
+                    onDispose { view.keepScreenOn = false }
+                }
 
                 DashboardScreen(
                     state = state,

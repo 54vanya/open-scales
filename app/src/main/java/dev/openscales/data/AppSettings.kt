@@ -25,6 +25,8 @@ data class AppSettings(
     val beepNote: BeepNote = BeepNote.DEFAULT,
     /** Кнопки управления срабатывают при касании (как физические кнопки весов), иначе — при отпускании. */
     val triggerOnPress: Boolean = true,
+    /** Не гасить экран, пока открыт главный экран. */
+    val keepScreenOn: Boolean = true,
 )
 
 interface AppSettingsStore {
@@ -32,6 +34,7 @@ interface AppSettingsStore {
     suspend fun setBeepEnabled(enabled: Boolean)
     suspend fun setBeepNote(note: BeepNote)
     suspend fun setTriggerOnPress(onPress: Boolean)
+    suspend fun setKeepScreenOn(keep: Boolean)
 }
 
 class DataStoreAppSettingsStore(context: Context) : AppSettingsStore {
@@ -42,6 +45,7 @@ class DataStoreAppSettingsStore(context: Context) : AppSettingsStore {
             beepEnabled = p[BEEP_ENABLED] ?: true,
             beepNote = BeepNote.fromName(p[BEEP_NOTE]),
             triggerOnPress = p[TRIGGER_ON_PRESS] ?: true,
+            keepScreenOn = p[KEEP_SCREEN_ON] ?: true,
         )
     }
 
@@ -57,10 +61,15 @@ class DataStoreAppSettingsStore(context: Context) : AppSettingsStore {
         store.edit { it[TRIGGER_ON_PRESS] = onPress }
     }
 
+    override suspend fun setKeepScreenOn(keep: Boolean) {
+        store.edit { it[KEEP_SCREEN_ON] = keep }
+    }
+
     private companion object {
         val BEEP_ENABLED = booleanPreferencesKey("beep_enabled")
         val BEEP_NOTE = stringPreferencesKey("beep_note")
         val TRIGGER_ON_PRESS = booleanPreferencesKey("trigger_on_press")
+        val KEEP_SCREEN_ON = booleanPreferencesKey("keep_screen_on")
     }
 }
 
@@ -79,5 +88,9 @@ class InMemoryAppSettingsStore(initial: AppSettings = AppSettings()) : AppSettin
 
     override suspend fun setTriggerOnPress(onPress: Boolean) {
         state.value = state.value.copy(triggerOnPress = onPress)
+    }
+
+    override suspend fun setKeepScreenOn(keep: Boolean) {
+        state.value = state.value.copy(keepScreenOn = keep)
     }
 }

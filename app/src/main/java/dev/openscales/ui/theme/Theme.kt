@@ -69,6 +69,13 @@ val WeightTextStyle = TextStyle(
     letterSpacing = (-1).sp,
 )
 
+/** Единицы измерения рядом со значениями: «g» у веса и «g/s» у потока — одним начертанием. */
+val UnitTextStyle = TextStyle(
+    fontSize = 28.sp,
+    lineHeight = 32.sp,
+    fontWeight = FontWeight.Normal,
+)
+
 val DigitsTextStyle = TextStyle(
     fontSize = 32.sp,
     lineHeight = 40.sp,

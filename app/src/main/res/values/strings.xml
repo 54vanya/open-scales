@@ -24,7 +24,7 @@
     <string name="pause">Пауза</string>
     <string name="reset">Сброс</string>
     <string name="flow_rate">Поток</string>
-    <string name="flow_rate_value">%1$s %2$s/s</string>
+    <string name="flow_rate_unit">%1$s/s</string>
     <string name="timer">Таймер</string>
     <string name="overload">Перегруз</string>
     <string name="battery">Батарея %1$d%%</string>
@@ -53,6 +53,7 @@
     <string name="settings_title_app">Настройки</string>
     <string name="settings_not_connected">Подключите весы, чтобы изменить настройки</string>
     <string name="section_app">Приложение</string>
+    <string name="setting_app_keep_screen_on">Не гасить экран на главном</string>
     <string name="setting_app_trigger">Срабатывание кнопок</string>
     <string name="trigger_on_press">При касании</string>
     <string name="trigger_on_release">При отпускании</string>

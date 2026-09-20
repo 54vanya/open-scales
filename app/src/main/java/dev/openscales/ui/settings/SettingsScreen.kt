@@ -14,6 +14,7 @@ import androidx.compose.material.icons.automirrored.rounded.Label
 import androidx.compose.material.icons.rounded.BluetoothDisabled
 import androidx.compose.material.icons.rounded.Brightness6
 import androidx.compose.material.icons.rounded.DeleteForever
+import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material.icons.rounded.Memory
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.TouchApp
@@ -89,6 +90,7 @@ data class SettingsActions(
     val onBeepEnabled: (Boolean) -> Unit = {},
     val onBeepNote: (BeepNote) -> Unit = {},
     val onTriggerOnPress: (Boolean) -> Unit = {},
+    val onKeepScreenOn: (Boolean) -> Unit = {},
 )
 
 private enum class Confirm { FACTORY_RESET, FORGET }
@@ -150,6 +152,15 @@ fun SettingsScreen(
                                 onSelect = actions.onTriggerOnPress,
                             )
                         }
+                    },
+                    { i, n ->
+                        SettingRow(
+                            i, n, Icons.Rounded.LightMode, stringResource(R.string.setting_app_keep_screen_on), null,
+                            trailing = {
+                                Switch(checked = appSettings.keepScreenOn, onCheckedChange = actions.onKeepScreenOn)
+                            },
+                            onClick = { actions.onKeepScreenOn(!appSettings.keepScreenOn) },
+                        )
                     },
                     { i, n ->
                         SettingRow(
