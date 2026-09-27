@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import dev.openscales.recipe.StepWeightMode
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
@@ -29,6 +30,12 @@ data class AppSettings(
     val keepScreenOn: Boolean = true,
     /** Показывать таймер весов вместо собственного секундомера приложения. */
     val syncTimerWithScale: Boolean = false,
+    /** Перечёркнутый ноль в цифрах показаний. */
+    val slashedZero: Boolean = true,
+    /** Как показывать воду в шагах рецепта. */
+    val stepWeightMode: StepWeightMode = StepWeightMode.DEFAULT,
+    /** Звуковые сигналы смены шага и набора цели на экране варки. */
+    val stepSignals: Boolean = true,
 )
 
 interface AppSettingsStore {
@@ -38,6 +45,9 @@ interface AppSettingsStore {
     suspend fun setTriggerOnPress(onPress: Boolean)
     suspend fun setKeepScreenOn(keep: Boolean)
     suspend fun setSyncTimerWithScale(sync: Boolean)
+    suspend fun setSlashedZero(slashed: Boolean)
+    suspend fun setStepWeightMode(mode: StepWeightMode)
+    suspend fun setStepSignals(enabled: Boolean)
 }
 
 class DataStoreAppSettingsStore(context: Context) : AppSettingsStore {
@@ -50,6 +60,9 @@ class DataStoreAppSettingsStore(context: Context) : AppSettingsStore {
             triggerOnPress = p[TRIGGER_ON_PRESS] ?: true,
             keepScreenOn = p[KEEP_SCREEN_ON] ?: true,
             syncTimerWithScale = p[SYNC_TIMER] ?: false,
+            slashedZero = p[SLASHED_ZERO] ?: true,
+            stepWeightMode = StepWeightMode.fromName(p[STEP_WEIGHT_MODE]),
+            stepSignals = p[STEP_SIGNALS] ?: true,
         )
     }
 
@@ -73,12 +86,27 @@ class DataStoreAppSettingsStore(context: Context) : AppSettingsStore {
         store.edit { it[SYNC_TIMER] = sync }
     }
 
+    override suspend fun setSlashedZero(slashed: Boolean) {
+        store.edit { it[SLASHED_ZERO] = slashed }
+    }
+
+    override suspend fun setStepWeightMode(mode: StepWeightMode) {
+        store.edit { it[STEP_WEIGHT_MODE] = mode.name }
+    }
+
+    override suspend fun setStepSignals(enabled: Boolean) {
+        store.edit { it[STEP_SIGNALS] = enabled }
+    }
+
     private companion object {
         val BEEP_ENABLED = booleanPreferencesKey("beep_enabled")
         val BEEP_NOTE = stringPreferencesKey("beep_note")
         val TRIGGER_ON_PRESS = booleanPreferencesKey("trigger_on_press")
         val KEEP_SCREEN_ON = booleanPreferencesKey("keep_screen_on")
         val SYNC_TIMER = booleanPreferencesKey("timer_sync")
+        val SLASHED_ZERO = booleanPreferencesKey("slashed_zero")
+        val STEP_WEIGHT_MODE = stringPreferencesKey("step_weight_mode")
+        val STEP_SIGNALS = booleanPreferencesKey("step_signals")
     }
 }
 
@@ -105,5 +133,17 @@ class InMemoryAppSettingsStore(initial: AppSettings = AppSettings()) : AppSettin
 
     override suspend fun setSyncTimerWithScale(sync: Boolean) {
         state.value = state.value.copy(syncTimerWithScale = sync)
+    }
+
+    override suspend fun setSlashedZero(slashed: Boolean) {
+        state.value = state.value.copy(slashedZero = slashed)
+    }
+
+    override suspend fun setStepWeightMode(mode: StepWeightMode) {
+        state.value = state.value.copy(stepWeightMode = mode)
+    }
+
+    override suspend fun setStepSignals(enabled: Boolean) {
+        state.value = state.value.copy(stepSignals = enabled)
     }
 }

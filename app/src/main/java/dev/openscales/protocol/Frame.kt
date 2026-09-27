@@ -3,7 +3,7 @@ package dev.openscales.protocol
 /**
  * Кадр протокола 2025: `A5 5A | type | cmd | len(BE16) | payload | crc(BE16)`.
  *
- * `type`: [TYPE_READ] — запрос чтения и ответ на него / периодические данные,
+ * `type`: [TYPE_REPORT] — периодический отчёт весов (кадры веса), [TYPE_READ] — запрос чтения и ответ на него,
  * [TYPE_WRITE] — запись и подтверждение записи (payload[0] == 1 — успех).
  */
 class Frame(val type: Int, val cmd: Int, val payload: ByteArray) {
@@ -16,6 +16,7 @@ class Frame(val type: Int, val cmd: Int, val payload: ByteArray) {
     companion object {
         const val HEADER_0 = 0xA5
         const val HEADER_1 = 0x5A
+        const val TYPE_REPORT = 0x01
         const val TYPE_READ = 0x02
         const val TYPE_WRITE = 0x03
         const val OVERHEAD = 8

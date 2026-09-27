@@ -11,7 +11,10 @@ sealed interface TransportEvent {
     data class Disconnected(val status: Int) : TransportEvent
 }
 
-class BleException(message: String) : Exception(message)
+open class BleException(message: String) : Exception(message)
+
+/** Bluetooth выключен: адаптер не отдаёт сканер. */
+class BluetoothOffException : BleException("bluetooth is off")
 
 /**
  * GATT-соединение с одним устройством. Все suspend-операции сериализованы реализацией

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Фон светлой схемы Material 3 (background/surface) -->
+    <color name="window_background">#FFFFFBFE</color>
+</resources>

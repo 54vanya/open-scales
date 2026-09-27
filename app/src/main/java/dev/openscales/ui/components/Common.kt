@@ -10,6 +10,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ProgressIndicatorDefaults
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material3.LocalContentColor
@@ -29,6 +33,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.core.content.ContextCompat
 import dev.openscales.R
 import dev.openscales.protocol.WeightUnit
+import dev.openscales.session.ConnectionError
 import dev.openscales.session.ConnectionPhase
 import java.util.Locale
 
@@ -45,8 +50,24 @@ object BlePermissions {
     }
 }
 
-fun formatWeight(value: Float?, unit: WeightUnit): String =
-    if (value == null) "—" else String.format(Locale.US, "%.${unit.decimals}f", value)
+/**
+ * Вес или поток с числом знаков по единице. Нет значения — заглушка из черт: [placeholderDigits] до точки
+ * и по одной на каждый знак после (`−−−.−`); знак минуса в табличных цифрах шрифта показаний шириной ровно с цифру.
+ */
+fun formatWeight(value: Float?, unit: WeightUnit, placeholderDigits: Int = WEIGHT_PLACEHOLDER_DIGITS): String =
+    if (value == null) {
+        NO_DIGIT.repeat(placeholderDigits) + "." + NO_DIGIT.repeat(unit.decimals)
+    } else {
+        String.format(Locale.US, "%.${unit.decimals}f", value)
+    }
+
+private const val NO_DIGIT = "\u2212"
+
+/** Черт до точки в заглушке веса. */
+const val WEIGHT_PLACEHOLDER_DIGITS = 3
+
+/** Черт до точки в заглушке потока. */
+const val FLOW_PLACEHOLDER_DIGITS = 2
 
 /** Время таймера `M:SS`, не длиннее 5 символов: всё, что ≥ 100 минут, показывается как `99:59`. */
 fun formatTime(seconds: Int): String {
@@ -56,8 +77,46 @@ fun formatTime(seconds: Int): String {
 
 const val MAX_TIMER_SECONDS = 99 * 60 + 59
 
-/** Самое широкое значение таймера — задаёт ширину области под таймер. */
+/** Самое широкое значение таймера — один из шаблонов числовой колонки главного экрана. */
 const val TIMER_WIDTH_TEMPLATE = "00:00"
+
+/** Текст причины неудачи подключения. У [ConnectionError.Failed] подробность не показываем: она в журнале. */
+@StringRes
+fun ConnectionError.messageRes(): Int = when (this) {
+    ConnectionError.NotTimemore -> R.string.error_not_timemore
+    ConnectionError.PairingNotStarted -> R.string.error_pairing_not_started
+    ConnectionError.PairingRejected -> R.string.error_pairing_rejected
+    ConnectionError.PairingTimeout -> R.string.error_pairing_timeout
+    ConnectionError.NoModel -> R.string.error_no_model
+    ConnectionError.Lost -> R.string.error_link_lost
+    ConnectionError.DroppedWhileConnecting -> R.string.error_dropped_while_connecting
+    is ConnectionError.Failed -> R.string.error_connect_failed
+}
+
+/** Обозначение единицы веса на языке интерфейса (`g`/`г`); `WeightUnit.symbol` — техническое, для логов. */
+@StringRes
+fun WeightUnit.symbolRes(): Int = when (this) {
+    WeightUnit.GRAM -> R.string.unit_gram_symbol
+    WeightUnit.OUNCE -> R.string.unit_ounce_symbol
+}
+
+/** Обозначение единицы потока: собирать из единицы веса и «/s» нельзя — по-русски это «г/с». */
+@StringRes
+fun WeightUnit.flowSymbolRes(): Int = when (this) {
+    WeightUnit.GRAM -> R.string.flow_unit_gram
+    WeightUnit.OUNCE -> R.string.flow_unit_ounce
+}
+
+/**
+ * Индикатор занятости — классический круговой спиннер Material 3 (выразительный `LoadingIndicator` с меняющейся
+ * фигурой пользователю не понравился). Один размер во всём приложении.
+ */
+@Composable
+fun BusyIndicator(modifier: Modifier = Modifier, color: Color = ProgressIndicatorDefaults.circularColor) {
+    CircularProgressIndicator(modifier.size(BusyIndicatorSize), color = color, strokeWidth = 3.dp)
+}
+
+private val BusyIndicatorSize = 24.dp
 
 @StringRes
 fun ConnectionPhase.labelRes(): Int = when (this) {

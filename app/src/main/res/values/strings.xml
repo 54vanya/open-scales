@@ -1,108 +1,350 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Open Scales</string>
+    <string name="app_name" translatable="false">Open Scales</string>
 
-    <!-- Фазы подключения -->
-    <string name="phase_disconnected">Не подключено</string>
-    <string name="phase_connecting">Подключение…</string>
-    <string name="phase_bonding">Сопряжение…</string>
-    <string name="phase_subscribing">Подписка на данные…</string>
-    <string name="phase_handshaking">Чтение параметров…</string>
-    <string name="phase_ready">Подключено</string>
-    <string name="phase_disconnecting">Отключение…</string>
-    <string name="phase_failed">Ошибка подключения</string>
-    <string name="reconnecting">Переподключение…</string>
+    <!-- Connection phases -->
+    <string name="phase_disconnected">Not connected</string>
+    <string name="phase_connecting">Connecting…</string>
+    <string name="phase_bonding">Pairing…</string>
+    <string name="phase_subscribing">Setting up data…</string>
+    <string name="phase_handshaking">Reading settings…</string>
+    <string name="phase_ready">Connected</string>
+    <string name="phase_disconnecting">Disconnecting…</string>
+    <string name="phase_failed">Connection failed</string>
+    <string name="reconnecting">Reconnecting…</string>
 
-    <!-- Главный экран -->
-    <string name="no_scale">Весы не выбраны</string>
-    <string name="action_find_scale">Найти весы</string>
-    <string name="action_connect">Подключить</string>
-    <string name="action_settings">Настройки весов</string>
-    <string name="action_scan">Поиск весов</string>
-    <string name="tare">Тара</string>
-    <string name="start">Старт</string>
-    <string name="pause">Пауза</string>
-    <string name="reset">Сброс</string>
-    <string name="flow_rate">Поток</string>
-    <string name="flow_rate_unit">%1$s/s</string>
-    <string name="timer">Таймер</string>
-    <string name="overload">Перегруз</string>
-    <string name="battery">Батарея %1$d%%</string>
+    <!-- Main screen -->
+    <string name="no_scale">No scale selected</string>
+    <string name="action_find_scale">Find scale</string>
+    <string name="action_connect">Connect</string>
+    <string name="action_settings">Settings</string>
+    <string name="action_scan">Scales</string>
+    <string name="tare">Tare</string>
+    <string name="start">Start</string>
+    <string name="pause">Pause</string>
+    <string name="reset">Reset</string>
+    <string name="flow_rate">Flow</string>
+    <string name="timer">Timer</string>
+    <string name="overload">Overload</string>
+    <string name="battery">Battery %1$d%%</string>
 
-    <!-- Поиск -->
-    <string name="scan_title">Поиск весов</string>
-    <string name="scan_subtitle_scanning">Идёт поиск…</string>
-    <string name="scan_subtitle_idle">Поиск остановлен</string>
-    <string name="scan_again">Искать снова</string>
-    <string name="scan_stop">Остановить</string>
-    <string name="scan_empty">Включите весы и поднесите их ближе к телефону</string>
-    <string name="scan_saved">Запомненные весы</string>
-    <string name="scan_found">Найденные весы</string>
+    <!-- Scan -->
+    <string name="scan_title">Scales</string>
+    <string name="scan_subtitle_scanning">Searching…</string>
+    <string name="scan_subtitle_idle">Search stopped</string>
+    <string name="scan_again">Search again</string>
+    <string name="scan_stop">Stop</string>
+    <string name="scan_empty">Turn on the scale and bring it closer to the phone</string>
+    <string name="scan_saved">My scale</string>
+    <string name="scan_found">Found scales</string>
     <string name="scan_rssi">%1$s · %2$d dBm</string>
-    <string name="scan_bonded">сопряжены</string>
-    <string name="permission_title">Нужен доступ к Bluetooth</string>
-    <string name="permission_text">Приложению нужно разрешение на поиск устройств рядом и подключение к ним, чтобы найти весы.</string>
-    <string name="permission_grant">Разрешить</string>
-    <string name="bluetooth_off_title">Bluetooth выключен</string>
-    <string name="bluetooth_off_text">Включите Bluetooth, чтобы найти и подключить весы.</string>
-    <string name="bluetooth_enable">Включить Bluetooth</string>
-    <string name="back">Назад</string>
+    <string name="scan_bonded">paired</string>
+    <string name="scan_status_connected">Connected · %1$d%%</string>
+    <string name="scan_offline">Offline</string>
+    <string name="scan_virtual">Virtual scale (debug)</string>
+    <string name="scan_scale_settings">%1$s settings</string>
+    <string name="permission_title">Bluetooth access needed</string>
+    <string name="permission_text">The app needs permission to find and connect to nearby devices to find your scale.</string>
+    <string name="permission_grant">Allow</string>
+    <string name="bluetooth_off_title">Bluetooth is off</string>
+    <string name="bluetooth_off_text">Turn on Bluetooth to find and connect your scale.</string>
+    <string name="bluetooth_enable">Turn on Bluetooth</string>
+    <string name="action_enable_bluetooth">Turn on</string>
+    <string name="back">Back</string>
 
-    <!-- Настройки -->
-    <string name="settings_title">Настройки весов</string>
-    <string name="settings_title_app">Настройки</string>
-    <string name="settings_not_connected">Подключите весы, чтобы изменить настройки</string>
-    <string name="section_app">Приложение</string>
-    <string name="setting_app_keep_screen_on">Не гасить экран на главном</string>
-    <string name="setting_app_trigger">Срабатывание кнопок</string>
-    <string name="trigger_on_press">При касании</string>
-    <string name="trigger_on_release">При отпускании</string>
-    <string name="setting_app_sync_timer">Синхронизировать таймер с весами</string>
-    <string name="setting_app_sync_timer_hint">Показывать время с весов вместо секундомера приложения</string>
-    <string name="setting_app_beep">Звук кнопок в приложении</string>
-    <string name="setting_app_beep_note">Нота сигнала</string>
-    <string name="note_c">До</string>
-    <string name="note_d">Ре</string>
-    <string name="note_e">Ми</string>
-    <string name="note_f">Фа</string>
-    <string name="note_g">Соль</string>
-    <string name="note_a">Ля</string>
-    <string name="note_b">Си</string>
-    <string name="section_device">Устройство</string>
-    <string name="section_weighing">Взвешивание</string>
-    <string name="section_actions">Действия</string>
-    <string name="setting_name">Имя</string>
-    <string name="setting_model">Модель</string>
-    <string name="setting_address">Адрес</string>
-    <string name="setting_firmware">Прошивка</string>
-    <string name="setting_serial">Серийный номер</string>
-    <string name="setting_unit">Единицы</string>
-    <string name="unit_gram">Граммы</string>
-    <string name="unit_ounce">Унции</string>
-    <string name="setting_sensitivity">Чувствительность</string>
-    <string name="setting_precision">Точность</string>
-    <string name="level_high">Высокая</string>
-    <string name="level_medium">Средняя</string>
-    <string name="level_low">Низкая</string>
-    <string name="setting_sound">Звук кнопок</string>
-    <string name="setting_brightness">Яркость экрана</string>
-    <string name="brightness_dark">Тёмный</string>
-    <string name="brightness_medium">Средний</string>
-    <string name="brightness_bright">Яркий</string>
-    <string name="setting_standby">Авто-отключение</string>
-    <string name="standby_minutes">%1$d мин</string>
-    <string name="decrease">Уменьшить</string>
-    <string name="increase">Увеличить</string>
+    <!-- Settings -->
+    <string name="settings_title_app">Settings</string>
+    <string name="section_app">App</string>
+    <string name="setting_app_keep_screen_on">Keep main screen awake</string>
+    <string name="setting_app_slashed_zero">Slashed zero</string>
+    <string name="setting_app_trigger">Buttons act on</string>
+    <string name="trigger_on_press">Press</string>
+    <string name="trigger_on_release">Release</string>
+    <string name="setting_app_sync_timer">Sync timer with scale</string>
+    <string name="setting_app_sync_timer_hint">Show the scale\'s time instead of the app\'s stopwatch</string>
+    <string name="setting_app_beep">Button sound in the app</string>
+    <string name="setting_app_beep_note">Beep note</string>
+    <string name="note_c">C</string>
+    <string name="note_d">D</string>
+    <string name="note_e">E</string>
+    <string name="note_f">F</string>
+    <string name="note_g">G</string>
+    <string name="note_a">A</string>
+    <string name="note_b">B</string>
+    <string name="section_device">Device</string>
+    <string name="section_weighing">Weighing</string>
+    <string name="section_actions">Actions</string>
+    <string name="setting_name">Name</string>
+    <string name="setting_model">Model</string>
+    <string name="setting_address">Address</string>
+    <string name="setting_firmware">Firmware</string>
+    <string name="setting_serial">Serial number</string>
+    <string name="setting_unit">Units</string>
+    <string name="unit_gram">Grams</string>
+    <string name="unit_ounce">Ounces</string>
+    <string name="setting_sensitivity">Sensitivity</string>
+    <string name="setting_precision">Precision</string>
+    <string name="level_high">High</string>
+    <string name="level_medium">Medium</string>
+    <string name="level_low">Low</string>
+    <string name="setting_sound">Button sound</string>
+    <string name="setting_brightness">Screen brightness</string>
+    <string name="brightness_dark">Low</string>
+    <string name="brightness_medium">Medium</string>
+    <string name="brightness_bright">High</string>
+    <string name="setting_standby">Auto power-off</string>
+    <string name="standby_minutes">%1$d min</string>
+    <string name="decrease">Decrease</string>
+    <string name="increase">Increase</string>
     <string name="unknown_value">—</string>
-    <string name="action_disconnect">Отключить</string>
-    <string name="action_power_off">Выключить весы</string>
-    <string name="action_factory_reset">Сброс к заводским</string>
-    <string name="action_forget">Забыть устройство</string>
-    <string name="factory_reset_confirm">Все настройки весов вернутся к заводским. Весы отключатся.</string>
-    <string name="forget_confirm">Весы будут отключены, сопряжение удалено. Чтобы снова пользоваться ими, найдите их заново.</string>
-    <string name="confirm">Подтвердить</string>
-    <string name="cancel">Отмена</string>
-    <string name="save">Сохранить</string>
-    <string name="rename_title">Имя весов</string>
-    <string name="rename_limit">Не больше %1$d байт (≈ %2$d латинских символов)</string>
+    <string name="action_disconnect">Disconnect</string>
+    <string name="action_power_off">Turn off scale</string>
+    <string name="action_factory_reset">Factory reset</string>
+    <string name="action_forget">Forget device</string>
+    <string name="factory_reset_confirm">All scale settings will return to factory defaults. The scale will disconnect.</string>
+    <string name="forget_confirm">The scale will be disconnected and unpaired. To use it again, find it again.</string>
+    <string name="confirm">Confirm</string>
+    <string name="cancel">Cancel</string>
+    <string name="save">Save</string>
+    <string name="rename_title">Scale name</string>
+    <plurals name="rename_limit">
+        <item quantity="one">Up to %1$d byte (about %1$d Latin character)</item>
+        <item quantity="other">Up to %1$d bytes (about %1$d Latin characters)</item>
+    </plurals>
+
+    <!-- Units -->
+    <string name="unit_gram_symbol">g</string>
+    <string name="unit_ounce_symbol">oz</string>
+    <string name="flow_unit_gram">g/s</string>
+    <string name="flow_unit_ounce">oz/s</string>
+
+    <!-- Language: language names are always written in their own language -->
+    <string name="setting_app_language">Language</string>
+    <string name="language_system">System</string>
+    <string name="language_russian" translatable="false">Русский</string>
+    <string name="language_english" translatable="false">English</string>
+
+    <!-- Theme -->
+    <string name="setting_app_theme">Theme</string>
+    <string name="theme_system">System</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+
+    <!-- Colors -->
+    <string name="setting_app_own_colors">Use app colors</string>
+    <string name="setting_app_own_colors_hint">Otherwise colors come from your wallpaper</string>
+
+    <!-- Connection errors -->
+    <string name="error_not_timemore">This device doesn\'t look like a Timemore scale</string>
+    <string name="error_pairing_not_started">Pairing didn\'t start</string>
+    <string name="error_pairing_rejected">Pairing was rejected</string>
+    <string name="error_pairing_timeout">Pairing didn\'t finish</string>
+    <string name="error_no_model">The scale didn\'t report its model</string>
+    <string name="error_link_lost">Connection lost</string>
+    <string name="error_dropped_while_connecting">Connection dropped while connecting</string>
+    <string name="error_connect_failed">Couldn\'t connect</string>
+
+    <!-- Command and scan errors -->
+    <string name="error_command_timeout">The scale didn\'t respond</string>
+    <string name="error_command_rejected">The scale rejected the command</string>
+    <string name="error_command_transport">No connection to the scale</string>
+    <string name="error_not_connected">The scale isn\'t connected</string>
+    <string name="error_command_failed">Couldn\'t complete the command</string>
+    <string name="error_bluetooth_off">Bluetooth is off</string>
+    <string name="error_scan_failed">Couldn\'t start searching</string>
+
+    <!-- Tabs and recipes -->
+    <string name="tab_scale">Scale</string>
+    <string name="tab_recipes">Recipes</string>
+    <string name="recipes_need_scale">Connect the scale to brew</string>
+    <string name="value_with_unit" translatable="false">%1$s\u00A0%2$s</string>
+    <string name="recipe_summary" translatable="false">%1$s · %2$s · %3$s</string>
+
+    <!-- Brewing -->
+    <string name="brew_beans_title">Weigh the beans</string>
+    <string name="brew_dose_water">Recipe dose %1$s · Water %2$s</string>
+    <string name="brew_until">until %1$s</string>
+    <string name="brew_next">Next</string>
+    <string name="brew_dose">Dose %1$s</string>
+    <string name="brew_waiting">Pour to start</string>
+    <string name="brew_resume">Resume</string>
+    <string name="brew_stop">Stop</string>
+    <string name="brew_step_left">%1$s left</string>
+    <string name="brew_left_of">left of %1$s</string>
+    <string name="brew_poured_of">poured of %1$s</string>
+    <string name="brew_total">total %1$s</string>
+    <string name="brew_done">Done</string>
+    <string name="brew_until_step">until “%1$s”</string>
+    <string name="brew_until_end">until the end</string>
+    <string name="brew_on_scale">on the scale</string>
+    <string name="brew_total_time">brew time %1$s</string>
+    <string name="brew_swap_title">Change recipe</string>
+    <string name="brew_swap_current">Current recipe</string>
+    <string name="brew_leave_title">Leave this recipe?</string>
+    <string name="brew_leave_text">The weighed dose won’t be kept.</string>
+    <string name="brew_leave">Leave</string>
+    <string name="brew_stay">Stay</string>
+    <string name="brew_reweigh">Weigh again</string>
+    <string name="brew_press_start">Press Start</string>
+    <string name="brew_finish_title">Finish brewing?</string>
+    <string name="brew_finish_text">The timer will stop at the current time.</string>
+    <string name="brew_continue">Keep brewing</string>
+    <string name="brew_finish">Finish</string>
+    <string name="setting_step_weight">Weight in recipe steps</string>
+    <string name="setting_step_signals">Step signals</string>
+    <string name="setting_step_signals_hint">Beep on each new recipe step, twice when a step\'s target is reached</string>
+    <string name="step_weight_remaining">Left to pour</string>
+    <string name="step_weight_poured">Poured of target</string>
+
+    <!-- Built-in recipe -->
+    <string name="recipe_hoffmann_title">Hoffmann V60</string>
+    <string name="recipe_hoffmann_description">Medium-fine grind. Water 94–95 °C.</string>
+    <string name="recipe_step_bloom">Bloom</string>
+    <string name="recipe_step_swirl">Swirl</string>
+    <string name="recipe_step_wait">Wait</string>
+    <string name="recipe_step_pour">Pour</string>
+    <string name="recipe_note_pour_slowly">Pour slowly</string>
+    <string name="recipe_note_spiral">In a spiral, slowly</string>
+    <string name="recipe_note_center">The rest into the center, slowly</string>
+    <string name="recipe_note_gently">Gently</string>
+    <string name="recipe_hint_bloom_total">The whole bloom takes 45 seconds</string>
+    <string name="recipe_hint_drawdown">Drawdown should finish by 3:00–3:45</string>
+
+    <!-- More built-in recipes -->
+    <string name="recipe_group_v60" translatable="false">V60</string>
+    <string name="recipe_group_flat_bottom">Flat-bottom dripper</string>
+    <string name="recipe_group_switch" translatable="false">Hario Switch</string>
+    <string name="recipe_group_chemex" translatable="false">Chemex</string>
+    <string name="recipe_group_aeropress">AeroPress</string>
+    <string name="recipe_step_stir">Stir</string>
+    <string name="recipe_step_press">Press</string>
+    <string name="recipe_step_bloom_second">Second bloom</string>
+    <string name="recipe_step_flip">Flip</string>
+    <string name="recipe_note_spiral_no_swirl">In a spiral, don\'t swirl</string>
+    <string name="recipe_note_no_swirl">Another 45 g in a spiral, don\'t swirl</string>
+    <string name="recipe_note_energetic_center">In a spiral with energy, keep the stream near the center</string>
+    <string name="recipe_hint_drawdown_230">Drawdown should finish by 2:30</string>
+    <string name="recipe_inverted_aeropress_title">Inverted AeroPress</string>
+    <string name="recipe_inverted_aeropress_description">Inverted: plunger at the bottom. Medium-fine grind. Water 93 °C.</string>
+    <string name="recipe_note_stir_three_four">Stir 3–4 times to wet all the grounds</string>
+    <string name="recipe_note_flip">Cap on, push the air out, flip onto the cup</string>
+    <string name="recipe_note_press_gently">Gently, with the weight of your hands</string>
+    <string name="recipe_kasuya_title">Tetsu Kasuya 4:6</string>
+    <string name="recipe_kasuya_description">Medium-coarse grind. Water 93 °C. Water is split 4:6: the first part sets sweetness and acidity, the second sets strength.</string>
+    <string name="recipe_note_spiral_center">Spiral from the center out and back</string>
+    <string name="recipe_hint_remove_dripper">At 3:30 remove the dripper</string>
+    <string name="recipe_rao_title">Scott Rao V60</string>
+    <string name="recipe_rao_description">Medium grind. Water just off the boil.</string>
+    <string name="recipe_note_spin_hard">Spin the dripper hard to wet all the grounds</string>
+    <string name="recipe_note_circles">In circles, without stopping</string>
+    <string name="recipe_note_stir_walls">Stir along the walls, then give a gentle spin</string>
+    <string name="recipe_hint_drawdown_330">Drawdown should finish by 3:00–3:30</string>
+    <string name="recipe_hedrick_title">Lance Hedrick V60</string>
+    <string name="recipe_hedrick_description">One and Done: two blooms and one pour. Medium-fine grind. Water 93 °C. Drawdown longer than 2:30 — grind coarser.</string>
+    <string name="recipe_kalita_title">Kalita Wave</string>
+    <string name="recipe_kalita_description">Medium-fine grind. Water about 96 °C.</string>
+    <string name="recipe_note_spiral_slowly">Slow spiral</string>
+    <string name="recipe_note_pulses">Small pulses of 25–50 g onto the lighter spots</string>
+    <string name="recipe_chemex_title">Chemex</string>
+    <string name="recipe_chemex_description">Medium-coarse grind. Water about 96 °C. For 2–3 cups.</string>
+    <string name="recipe_note_stir_dry">Stir so no dry clumps remain</string>
+    <string name="recipe_note_wiggle">Wiggle the stream, then spiral</string>
+    <string name="recipe_note_to_top">Up to the top of the brewer</string>
+    <string name="recipe_hoffmann_aeropress_title">Hoffmann AeroPress</string>
+    <string name="recipe_hoffmann_aeropress_description">Water 99 °C. No filter rinse, no preheating.</string>
+    <string name="recipe_note_plunger_on">Insert the plunger about 1 cm right away</string>
+    <string name="recipe_note_hold_both">Holding the brewer and the plunger</string>
+    <string name="recipe_note_press_slowly">Slowly, all the way</string>
+
+    <!-- Иммерсия, чемпионские рецепты, сложность -->
+    <string name="recipe_hoffmann_one_cup_title">Hoffmann’s 1-cup V60</string>
+    <string name="recipe_hoffmann_one_cup_description">Five equal 50 g pours. Medium-fine grind, as fine as you can go without bitterness. Water: light roast — just off the boil, medium — 96 °C.</string>
+    <string name="recipe_kasuya_switch_title">Tetsu Kasuya’s hybrid</string>
+    <string name="recipe_kasuya_switch_description">Hybrid: pour-over with the valve open, then immersion. Medium-fine grind. Water 90 °C, the third pour 70 °C. Drawdown past 3:00 — grind coarser.</string>
+    <string name="recipe_hoffmann_french_press_title">Hoffmann’s French press</string>
+    <string name="recipe_hoffmann_french_press_description">A long steep with no pressing. Medium-coarse grind. Water just off the boil. Makes 2 cups.</string>
+    <string name="recipe_wac2022_title">Jibbi Little (WAC 2022)</string>
+    <string name="recipe_wac2022_description">2022 World AeroPress Champion (Australia). Inverted. Water 90 °C. After pressing, dilute to 150 g.</string>
+    <string name="recipe_wac2019_title">Wendelien van Bunnik (WAC 2019)</string>
+    <string name="recipe_wac2019_description">2019 World AeroPress Champion (Netherlands). Lots of coffee, a short steep, dilution after pressing. Inverted. Water 92 °C.</string>
+    <string name="recipe_step_open_valve">Open the valve</string>
+    <string name="recipe_step_break_crust">Break the crust</string>
+    <string name="recipe_step_skim">Skim</string>
+    <string name="recipe_step_cap">Cap it</string>
+    <string name="recipe_note_valve_open">Valve open, water 90 °C</string>
+    <string name="recipe_note_valve_close_70">Close the valve, water 70 °C</string>
+    <string name="recipe_note_all_at_once">All the water at once</string>
+    <string name="recipe_note_break_crust">Stir the top layer with a spoon</string>
+    <string name="recipe_note_skim">Lift off the foam and bits with two spoons</string>
+    <string name="recipe_note_up_to_8_min">Up to 8 minutes is fine</string>
+    <string name="recipe_note_inverted">AeroPress inverted</string>
+    <string name="recipe_note_stir_35">Gently, 35 strokes</string>
+    <string name="recipe_note_stir_20_firm">Firmly, 20 strokes</string>
+    <string name="recipe_note_remove_air">Push out the air</string>
+    <string name="recipe_note_press_all">All the way</string>
+    <string name="recipe_hint_drawdown_300">The drawdown should finish by 3:00</string>
+    <string name="recipe_hint_plunge_to_surface">Lower the plunger just to the surface and pour slowly</string>
+    <string name="recipe_hint_dilute_150">Dilute with hot water to 150 g</string>
+    <string name="recipe_hint_dilute_100">Dilute with hot water, about 100 g, to taste</string>
+    <string name="recipe_group_french_press">French press</string>
+    <string name="difficulty_easy">Easy</string>
+    <string name="difficulty_medium">Medium</string>
+    <string name="difficulty_hard">Hard</string>
+
+    <string name="recipe_wbrc2024_title">Martin Wölfl (WBrC 2024)</string>
+    <string name="recipe_wbrc2024_description">2024 World Brewers Cup Champion (Austria). Four pours, done by 2:00. Medium grind. Water 93 °C. Competition brewer: flat-bottom Orea.</string>
+    <string name="recipe_wbrc2022_title">Sherry Hsu (WBrC 2022)</string>
+    <string name="recipe_wbrc2022_description">2022 World Brewers Cup Champion (Taiwan). Four 50 g pours every 30 seconds: the first with 70 °C water, the rest 95 °C. Medium-coarse grind. Competition brewer: flat-bottom Orea.</string>
+    <string name="recipe_fukahori_switch_title">Emi Fukahori (WBrC 2018)</string>
+    <string name="recipe_fukahori_switch_description">2018 World Brewers Cup Champion (Switzerland). Her easy Switch recipe from the MAME cafés. Medium-coarse grind.</string>
+    <string name="recipe_note_water_70">Water 70 °C</string>
+    <string name="recipe_note_water_95">From now on, 95 °C water</string>
+    <string name="recipe_note_valve_closed">Valve closed</string>
+    <string name="recipe_note_open_pour_center">Open the valve, pour into the centre without stopping</string>
+    <string name="recipe_note_until_drained">Until it has all drained</string>
+    <string name="recipe_hint_drain">Wait until it has all drained</string>
+
+    <!-- Own recipes and the recipe editor -->
+    <string name="recipe_group_mine">My recipes</string>
+    <string name="recipe_new">New recipe</string>
+    <string name="recipe_actions">Recipe actions</string>
+    <string name="recipe_action_edit">Edit</string>
+    <string name="recipe_action_copy">Copy</string>
+    <string name="recipe_action_delete">Delete</string>
+    <string name="recipe_delete_title">Delete recipe “%1$s”?</string>
+    <string name="recipe_copy_title">%1$s (copy)</string>
+    <string name="editor_title_new">New recipe</string>
+    <string name="editor_title_edit">Edit recipe</string>
+    <string name="editor_field_title">Name</string>
+    <string name="editor_field_dose">Default dose</string>
+    <string name="editor_field_category">Brewer</string>
+    <string name="editor_field_description">Description</string>
+    <string name="editor_item_step">Step</string>
+    <string name="editor_item_hint">Note</string>
+    <string name="editor_add">Add step or note</string>
+    <string name="editor_field_duration">Duration</string>
+    <string name="editor_duration_hint">Minutes and seconds, m:ss</string>
+    <string name="editor_field_target">Water milestone</string>
+    <string name="editor_target_hint">Total poured by the end of the step at the default dose; empty — no water</string>
+    <string name="editor_field_note">Comment</string>
+    <string name="editor_show_time">Large: time to the end of the step</string>
+    <string name="editor_field_hint_text">Text</string>
+    <string name="editor_move_up">Move up</string>
+    <string name="editor_move_down">Move down</string>
+    <string name="editor_delete_item">Delete</string>
+    <string name="editor_cancel">Cancel</string>
+    <string name="editor_save">Save</string>
+    <string name="editor_discard_title">Discard changes?</string>
+    <string name="editor_keep_editing">Keep editing</string>
+    <string name="editor_discard">Discard changes</string>
+    <string name="editor_error_empty">Fill in this field</string>
+    <string name="editor_error_grams">Whole grams only</string>
+    <string name="editor_error_duration">Enter m:ss, seconds up to 59</string>
+    <string name="editor_error_zero">Must be greater than zero</string>
+    <string name="editor_error_below_previous">Can’t be less than the milestone above (%1$s)</string>
+    <string name="editor_error_no_steps">Add at least one step</string>
+    <string name="editor_save_failed">Couldn’t save the recipe</string>
+
+    <!-- BLE log (button in the debug build) -->
+    <string name="journal_title">BLE log</string>
 </resources>

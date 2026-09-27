@@ -9,18 +9,22 @@ Open Scales — Android-приложение (Kotlin, Compose, Material 3 Expres
 ## Команды
 
 JDK 17 обязателен (системной Java нет), SDK — `/opt/homebrew/share/android-commandlinetools` (`local.properties`).
+Gradle запускать с `--no-watch-fs`: иначе демон намертво виснет в нативном вотчере файлов (`tools/dev.sh` флаг уже добавляет).
 
 ```sh
 export JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home
-./gradlew :app:testDebugUnitTest :app:assembleDebug :app:lintDebug      # полная проверка (lint должен быть «No issues found»)
-./gradlew :app:testDebugUnitTest --tests '*ScaleSessionTest'           # один класс; '*ScaleSessionTest.link*' — один тест
-./gradlew :app:assembleRelease                                         # R8, подпись debug-ключом, ~1.7 МБ
+./gradlew --no-watch-fs :app:verifyRoborazziDebug :app:assembleDebug :app:lintDebug  # полная проверка: юнит-тесты + сверка скриншотов
+./gradlew --no-watch-fs :app:recordRoborazziDebug --tests '*ScreenshotTest'        # перезаписать эталоны скриншотов
+./gradlew --no-watch-fs :app:testDebugUnitTest --tests '*ScaleSessionTest'        # один класс; '*ScaleSessionTest.link*' — один тест
+./gradlew --no-watch-fs :app:assembleRelease                                      # R8, подпись debug-ключом, ~1.8 МБ
 ```
 
 `tools/dev.sh` — харнес для устройства: `install [debug|release]`, `start`, `grant`, `stayon`, `shot <name>`,
 `tap x y`, `find "<text>"` (bounds через uiautomator), `ble` (фильтрованный logcat TX/RX), `scan-log`,
 `emu` / `emu-narrow` / `emu-kill` (AVD `openscales_phone`, API 36), `decompile` (jadx исходного APK).
-Без аргументов печатает список. Устройство выбирается по `$ANDROID_SERIAL`, иначе первый телефон.
+`sim <команда>` — виртуальные весы (см. ниже). Без аргументов печатает список. Устройство выбирается по
+`$ANDROID_SERIAL`, иначе первый телефон — а без телефона это может оказаться TV в adb, поэтому на эмуляторе
+`export ANDROID_SERIAL=emulator-5554`.
 
 ## Архитектура
 
@@ -32,8 +36,12 @@ ble/       BleTransport (интерфейс) ← AndroidBleTransport (BluetoothG
 session/   CommandQueue → ScaleSession (одна попытка подключения: фазы, bond, MTU, notify, handshake, команды)
            → ScaleRepository (синглтон: текущая сессия, запомненные весы, авто-переподключение)
 data/      DataStore «scale»: SavedDeviceStore (весы) и AppSettingsStore (звук, режим срабатывания кнопок)
+recipe/    чистый Kotlin: рецепт, встроенный рецепт, ход шагов, распределение воды, детектор пролива
+sim/       чистый Kotlin: ScaleEmulator (весы протокола 2025 без радио, общий с тестовым FakeBleTransport),
+           SimulatedBleTransport, ScaleSimulator (виртуальные весы debug, разбор команд из терминала)
 sound/     BeepPcm → AudioTrackBeeper (MODE_STATIC) ← ButtonSound (решает, звучать ли)
-ui/        Activity на каждый экран: MainActivity (dashboard), ScanActivity, SettingsActivity; debug/JournalActivity
+ui/        Activity на каждый экран: MainActivity (вкладки «Весы»/«Рецепты»), ScanActivity, SettingsActivity,
+           BrewActivity (варка по рецепту); debug/JournalActivity, debug/SimControlReceiver
 ```
 
 - Зависимости собираются вручную в `OpenScalesApp` (без DI). `appScope` — `Dispatchers.Main.immediate`: вся мутация
@@ -44,9 +52,12 @@ ui/        Activity на каждый экран: MainActivity (dashboard), Scan
 - Кнопки управления оптимистичны: состояние таймера меняется до ответа весов и откатывается при отказе;
   срабатывание по касанию — `rememberPressAction` в `DashboardScreen` (настройка «При касании/При отпускании»).
 - Debug-only код: журнал включается по `BuildConfig.DEBUG`, `JournalActivity` и её манифест — в `app/src/debug`.
-  Логи TX/RX и сканера тоже только в debug.
+  Логи TX/RX и сканера тоже только в debug. В журнал в debug также пишутся тики секундомера (`TIMER`) и сторож
+  главного потока `MainThreadWatchdog` (`STALL`, если поток занят дольше 200 мс),
+  паузы в потоке кадров дольше 300 мс (`GAP`). Важные события (всё, кроме TX/RX и обычных тиков) дублируются в отдельный
+  буфер на 500 записей, который поток кадров не вытесняет — экран журнала переключается «Всё/Важное».
 - Material 3 — `1.5.0-alpha28` (Expressive API: `ButtonGroup`, `ToggleButton`, `SegmentedListItem`,
-  `LoadingIndicator`, flexible top app bars). Opt-in в `app/build.gradle.kts`. Эти библиотеки требуют compileSdk 37.
+  flexible top app bars; индикатор занятости — классический `CircularProgressIndicator` через `BusyIndicator`). Opt-in в `app/build.gradle.kts`. Эти библиотеки требуют compileSdk 37.
 
 ## Протокол и проверка на железе
 
@@ -54,9 +65,24 @@ ui/        Activity на каждый экран: MainActivity (dashboard), Scan
 на реальных весах: CRC в кадрах от весов нулевой (строго не проверять), вес приходит сам кадрами `type=0x01`,
 процент батареи во втором байте ответа `0x05`.
 
+**Виртуальные весы (debug).** В поиске есть «Виртуальные весы» (Virtual DOT, адрес `02:00:5C:A1:E0:01`): полный
+handshake через настоящую сессию, кадры веса 10 Гц, тара, таймер, журнал BLE; Bluetooth и разрешения не нужны —
+работает на эмуляторе Android. Управление: `tools/dev.sh sim weight 15 | pour 250 30 | noise 0.1 | unit oz |
+battery 20 | drop | back | reject tare|timer|settings|all|none | status | reset` (вес всегда в граммах). Эмулятор живёт
+в процессе: после `am force-stop` состояние сбрасывается. В release код вырезается R8.
+
 Тесты сессии/репозитория идут на `FakeBleTransport` (эмулятор весов в `app/src/test/.../session`) в `backgroundScope`;
 `advanceUntilIdle()` фоновые корутины не прокручивает — используйте `settle()` из `TestTime.kt`.
 Регрессии по реальным кадрам добавляйте байтами из журнала BLE.
+
+## Скриншот-тесты одобренных экранов
+
+Экран, который пользователь одобрил, фиксируется скриншот-тестом (Roborazzi + Robolectric, `app/src/test/.../ui/screenshots`):
+Compose рисуется в JVM без эмулятора, эталоны — `app/src/test/screenshots/*.png` в репозитории. Новый или изменённый
+одобренный вид — тест и эталон в том же чейндже; перед записью эталон просмотреть глазами. Упавшая сверка кладёт
+`*_compare.png` (эталон / разница / новое) в `app/build/outputs/roborazzi`. Экраны рисуются напрямую (без Activity),
+с простым `Application`, светлой темой и собственными цветами, по-русски, 411×914 dp (узкий — 320 dp). Robolectric — SDK
+34: SDK 35+ требует Java 21, проект на Java 17.
 
 ## OpenSpec
 

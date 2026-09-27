@@ -1,0 +1,342 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Фазы подключения -->
+    <string name="phase_disconnected">Не подключено</string>
+    <string name="phase_connecting">Подключение…</string>
+    <string name="phase_bonding">Сопряжение…</string>
+    <string name="phase_subscribing">Настройка приёма данных…</string>
+    <string name="phase_handshaking">Чтение параметров…</string>
+    <string name="phase_ready">Подключено</string>
+    <string name="phase_disconnecting">Отключение…</string>
+    <string name="phase_failed">Ошибка подключения</string>
+    <string name="reconnecting">Переподключение…</string>
+
+    <!-- Главный экран -->
+    <string name="no_scale">Весы не выбраны</string>
+    <string name="action_find_scale">Найти весы</string>
+    <string name="action_connect">Подключить</string>
+    <string name="action_settings">Настройки</string>
+    <string name="action_scan">Весы</string>
+    <string name="tare">Тара</string>
+    <string name="start">Старт</string>
+    <string name="pause">Пауза</string>
+    <string name="reset">Сброс</string>
+    <string name="flow_rate">Поток</string>
+    <string name="timer">Таймер</string>
+    <string name="overload">Перегрузка</string>
+    <string name="battery">Батарея %1$d%%</string>
+
+    <!-- Поиск -->
+    <string name="scan_title">Весы</string>
+    <string name="scan_subtitle_scanning">Идёт поиск…</string>
+    <string name="scan_subtitle_idle">Поиск остановлен</string>
+    <string name="scan_again">Искать снова</string>
+    <string name="scan_stop">Остановить</string>
+    <string name="scan_empty">Включите весы и поднесите их ближе к телефону</string>
+    <string name="scan_saved">Мои весы</string>
+    <string name="scan_found">Найденные весы</string>
+    <string name="scan_rssi">%1$s · %2$d дБм</string>
+    <string name="scan_bonded">сопряжены</string>
+    <string name="scan_status_connected">Подключено · %1$d %%</string>
+    <string name="scan_offline">Не в сети</string>
+    <string name="scan_virtual">Виртуальные весы (отладка)</string>
+    <string name="scan_scale_settings">Настройки весов %1$s</string>
+    <string name="permission_title">Нужен доступ к Bluetooth</string>
+    <string name="permission_text">Приложению нужно разрешение на поиск устройств рядом и подключение к ним, чтобы найти весы.</string>
+    <string name="permission_grant">Разрешить</string>
+    <string name="bluetooth_off_title">Bluetooth выключен</string>
+    <string name="bluetooth_off_text">Включите Bluetooth, чтобы найти и подключить весы.</string>
+    <string name="bluetooth_enable">Включить Bluetooth</string>
+    <string name="action_enable_bluetooth">Включить</string>
+    <string name="back">Назад</string>
+
+    <!-- Настройки -->
+    <string name="settings_title_app">Настройки</string>
+    <string name="section_app">Приложение</string>
+    <string name="setting_app_keep_screen_on">Не гасить экран на главном экране</string>
+    <string name="setting_app_slashed_zero">Перечёркнутый ноль</string>
+    <string name="setting_app_trigger">Срабатывание кнопок</string>
+    <string name="trigger_on_press">При касании</string>
+    <string name="trigger_on_release">При отпускании</string>
+    <string name="setting_app_sync_timer">Синхронизировать таймер с весами</string>
+    <string name="setting_app_sync_timer_hint">Показывать время с весов вместо секундомера приложения</string>
+    <string name="setting_app_beep">Звук кнопок в приложении</string>
+    <string name="setting_app_beep_note">Нота сигнала</string>
+    <string name="note_c">До</string>
+    <string name="note_d">Ре</string>
+    <string name="note_e">Ми</string>
+    <string name="note_f">Фа</string>
+    <string name="note_g">Соль</string>
+    <string name="note_a">Ля</string>
+    <string name="note_b">Си</string>
+    <string name="section_device">Устройство</string>
+    <string name="section_weighing">Взвешивание</string>
+    <string name="section_actions">Действия</string>
+    <string name="setting_name">Имя</string>
+    <string name="setting_model">Модель</string>
+    <string name="setting_address">Адрес</string>
+    <string name="setting_firmware">Прошивка</string>
+    <string name="setting_serial">Серийный номер</string>
+    <string name="setting_unit">Единицы измерения</string>
+    <string name="unit_gram">Граммы</string>
+    <string name="unit_ounce">Унции</string>
+    <string name="setting_sensitivity">Чувствительность</string>
+    <string name="setting_precision">Точность</string>
+    <string name="level_high">Высокая</string>
+    <string name="level_medium">Средняя</string>
+    <string name="level_low">Низкая</string>
+    <string name="setting_sound">Звук кнопок</string>
+    <string name="setting_brightness">Яркость экрана</string>
+    <string name="brightness_dark">Низкая</string>
+    <string name="brightness_medium">Средняя</string>
+    <string name="brightness_bright">Высокая</string>
+    <string name="setting_standby">Автоотключение</string>
+    <string name="standby_minutes">%1$d мин</string>
+    <string name="decrease">Уменьшить</string>
+    <string name="increase">Увеличить</string>
+    <string name="unknown_value">—</string>
+    <string name="action_disconnect">Отключить</string>
+    <string name="action_power_off">Выключить весы</string>
+    <string name="action_factory_reset">Сброс к заводским настройкам</string>
+    <string name="action_forget">Забыть устройство</string>
+    <string name="factory_reset_confirm">Все настройки весов вернутся к заводским. Весы отключатся.</string>
+    <string name="forget_confirm">Весы будут отключены, сопряжение удалено. Чтобы снова пользоваться ими, найдите их заново.</string>
+    <string name="confirm">Подтвердить</string>
+    <string name="cancel">Отмена</string>
+    <string name="save">Сохранить</string>
+    <string name="rename_title">Имя весов</string>
+    <!-- «не больше» + родительный падеж: 21 байта, 22 байт, 25 байт -->
+    <plurals name="rename_limit">
+        <item quantity="one">Не больше %1$d байта (≈ %1$d латинского символа)</item>
+        <item quantity="few">Не больше %1$d байт (≈ %1$d латинских символов)</item>
+        <item quantity="many">Не больше %1$d байт (≈ %1$d латинских символов)</item>
+        <item quantity="other">Не больше %1$d байта (≈ %1$d латинского символа)</item>
+    </plurals>
+    <!-- Единицы -->
+    <string name="unit_gram_symbol">г</string>
+    <string name="unit_ounce_symbol">oz</string>
+    <string name="flow_unit_gram">г/с</string>
+    <string name="flow_unit_ounce">oz/s</string>
+
+    <!-- Язык -->
+    <string name="setting_app_language">Язык</string>
+    <string name="language_system">Системный</string>
+
+    <!-- Тема -->
+    <string name="setting_app_theme">Тема</string>
+    <string name="theme_system">Системная</string>
+    <string name="theme_light">Светлая</string>
+    <string name="theme_dark">Тёмная</string>
+
+    <!-- Цвета -->
+    <string name="setting_app_own_colors">Собственные цвета приложения</string>
+    <string name="setting_app_own_colors_hint">Иначе цвета берутся из обоев телефона</string>
+
+    <!-- Ошибки подключения -->
+    <string name="error_not_timemore">Устройство не похоже на весы Timemore</string>
+    <string name="error_pairing_not_started">Сопряжение не началось</string>
+    <string name="error_pairing_rejected">Сопряжение отклонено</string>
+    <string name="error_pairing_timeout">Сопряжение не завершилось</string>
+    <string name="error_no_model">Весы не сообщили модель</string>
+    <string name="error_link_lost">Соединение потеряно</string>
+    <string name="error_dropped_while_connecting">Соединение разорвано во время подключения</string>
+    <string name="error_connect_failed">Не удалось подключиться</string>
+
+    <!-- Ошибки команд и поиска -->
+    <string name="error_command_timeout">Весы не ответили</string>
+    <string name="error_command_rejected">Весы отклонили команду</string>
+    <string name="error_command_transport">Нет связи с весами</string>
+    <string name="error_not_connected">Весы не подключены</string>
+    <string name="error_command_failed">Не удалось выполнить команду</string>
+    <string name="error_bluetooth_off">Bluetooth выключен</string>
+    <string name="error_scan_failed">Не удалось начать поиск</string>
+
+    <!-- Вкладки и рецепты -->
+    <string name="tab_scale">Весы</string>
+    <string name="tab_recipes">Рецепты</string>
+    <string name="recipes_need_scale">Для варки подключите весы</string>
+
+    <!-- Варка -->
+    <string name="brew_beans_title">Взвесьте зерно</string>
+    <string name="brew_dose_water">Доза в рецепте %1$s · Вода %2$s</string>
+    <string name="brew_until">до %1$s</string>
+    <string name="brew_next">Далее</string>
+    <string name="brew_dose">Доза %1$s</string>
+    <string name="brew_waiting">Начните пролив</string>
+    <string name="brew_resume">Продолжить</string>
+    <string name="brew_stop">Стоп</string>
+    <string name="brew_step_left">осталось %1$s</string>
+    <string name="brew_left_of">осталось из %1$s</string>
+    <string name="brew_poured_of">налито из %1$s</string>
+    <string name="brew_total">всего %1$s</string>
+    <string name="brew_done">Готово</string>
+    <string name="brew_until_step">до «%1$s»</string>
+    <string name="brew_until_end">до конца</string>
+    <string name="brew_on_scale">на весах</string>
+    <string name="brew_total_time">время варки %1$s</string>
+    <string name="brew_swap_title">Сменить рецепт</string>
+    <string name="brew_swap_current">Текущий рецепт</string>
+    <string name="brew_leave_title">Выйти из рецепта?</string>
+    <string name="brew_leave_text">Взвешенная доза не сохранится.</string>
+    <string name="brew_leave">Выйти</string>
+    <string name="brew_stay">Остаться</string>
+    <string name="brew_reweigh">Взвесить заново</string>
+    <string name="brew_press_start">Нажмите «Старт»</string>
+    <string name="brew_finish_title">Завершить варку?</string>
+    <string name="brew_finish_text">Таймер остановится на текущем времени.</string>
+    <string name="brew_continue">Продолжить варку</string>
+    <string name="brew_finish">Завершить</string>
+    <string name="setting_step_weight">Вес в шагах рецепта</string>
+    <string name="setting_step_signals">Сигналы шагов</string>
+    <string name="setting_step_signals_hint">Сигнал на каждом новом шаге рецепта, двойной — когда цель шага набрана</string>
+    <string name="step_weight_remaining">Осталось налить</string>
+    <string name="step_weight_poured">Налито из цели</string>
+
+    <!-- Встроенный рецепт -->
+    <string name="recipe_hoffmann_title">V60 по Хоффману</string>
+    <string name="recipe_hoffmann_description">Помол средне-мелкий. Вода 94–95 °C.</string>
+    <string name="recipe_step_bloom">Цветение</string>
+    <string name="recipe_step_swirl">Взболтайте</string>
+    <string name="recipe_step_wait">Подождите</string>
+    <string name="recipe_step_pour">Налейте</string>
+    <string name="recipe_note_pour_slowly">Лейте медленно</string>
+    <string name="recipe_note_spiral">По спирали, медленно</string>
+    <string name="recipe_note_center">Остаток — в центр, медленно</string>
+    <string name="recipe_note_gently">Слегка</string>
+    <string name="recipe_hint_bloom_total">Всё цветение — 45 секунд</string>
+    <string name="recipe_hint_drawdown">Пролив должен закончиться к 3:00–3:45</string>
+
+    <!-- Другие встроенные рецепты -->
+    <string name="recipe_group_flat_bottom">Плоскодонная воронка</string>
+    <string name="recipe_group_aeropress">Аэропресс</string>
+    <string name="recipe_step_stir">Размешайте</string>
+    <string name="recipe_step_press">Прожмите</string>
+    <string name="recipe_step_bloom_second">Второе цветение</string>
+    <string name="recipe_step_flip">Переверните</string>
+    <string name="recipe_note_spiral_no_swirl">По спирали, не взбалтывайте</string>
+    <string name="recipe_note_no_swirl">Ещё 45 г по спирали, не взбалтывайте</string>
+    <string name="recipe_note_energetic_center">Энергично по спирали, струя ближе к центру</string>
+    <string name="recipe_hint_drawdown_230">Пролив должен закончиться к 2:30</string>
+    <string name="recipe_inverted_aeropress_title">Перевёрнутый аэропресс</string>
+    <string name="recipe_inverted_aeropress_description">Поршень снизу, аэропресс перевёрнут. Помол средне-мелкий. Вода 93 °C.</string>
+    <string name="recipe_note_stir_three_four">Размешайте 3–4 раза, чтобы намочить всё</string>
+    <string name="recipe_note_flip">Наденьте крышку, выдавите воздух, переверните на чашку</string>
+    <string name="recipe_note_press_gently">Мягко, весом рук</string>
+    <string name="recipe_kasuya_title">4:6 Тэцу Касуи</string>
+    <string name="recipe_kasuya_description">Помол средне-крупный. Вода 93 °C. Вода делится 4:6: первая часть задаёт сладость и кислотность, вторая — крепость.</string>
+    <string name="recipe_note_spiral_center">По спирали от центра и обратно</string>
+    <string name="recipe_hint_remove_dripper">В 3:30 снимите воронку</string>
+    <string name="recipe_rao_title">V60 Скотта Рао</string>
+    <string name="recipe_rao_description">Помол средний. Вода почти кипяток.</string>
+    <string name="recipe_note_spin_hard">Сильно взболтайте воронку, чтобы намочить всё</string>
+    <string name="recipe_note_circles">По кругу, без пауз</string>
+    <string name="recipe_note_stir_walls">Размешайте у стенок, затем слегка взболтайте</string>
+    <string name="recipe_hint_drawdown_330">Пролив должен закончиться к 3:00–3:30</string>
+    <string name="recipe_hedrick_title">V60 Ленса Хедрика</string>
+    <string name="recipe_hedrick_description">One and Done: два цветения и один пролив. Помол средне-мелкий. Вода 93 °C. Пролив дольше 2:30 — помол крупнее.</string>
+    <string name="recipe_kalita_title">Kalita Wave</string>
+    <string name="recipe_kalita_description">Помол средне-мелкий. Вода около 96 °C.</string>
+    <string name="recipe_note_spiral_slowly">Медленно по спирали</string>
+    <string name="recipe_note_pulses">Порциями по 25–50 г на светлые пятна</string>
+    <string name="recipe_chemex_title">Chemex</string>
+    <string name="recipe_chemex_description">Помол средне-крупный. Вода около 96 °C. На 2–3 чашки.</string>
+    <string name="recipe_note_stir_dry">Размешайте, чтобы не осталось сухих комков</string>
+    <string name="recipe_note_wiggle">Покачивая струю, затем по спирали</string>
+    <string name="recipe_note_to_top">До края</string>
+    <string name="recipe_hoffmann_aeropress_title">Аэропресс Хоффмана</string>
+    <string name="recipe_hoffmann_aeropress_description">Вода 99 °C. Фильтр не промывать, аэропресс не прогревать.</string>
+    <string name="recipe_note_plunger_on">Сразу вставьте поршень на 1 см</string>
+    <string name="recipe_note_hold_both">Держа за корпус и поршень</string>
+    <string name="recipe_note_press_slowly">Медленно, до конца</string>
+
+    <!-- Журнал BLE (кнопка в debug-сборке) -->
+    <string name="journal_title">Журнал BLE</string>
+    <!-- Иммерсия, чемпионские рецепты, сложность -->
+    <string name="recipe_hoffmann_one_cup_title">V60 Хоффмана на одну чашку</string>
+    <string name="recipe_hoffmann_one_cup_description">Пять одинаковых проливов по 50 г. Помол средне-мелкий — как можно мельче без горечи. Вода: светлая обжарка — кипяток, средняя — 96 °C.</string>
+    <string name="recipe_kasuya_switch_title">Гибрид Тэцу Касуи</string>
+    <string name="recipe_kasuya_switch_description">Гибрид: сначала пролив с открытым клапаном, потом настаивание. Помол средне-мелкий. Вода 90 °C, для третьего пролива — 70 °C. Слив дольше 3:00 — помол крупнее.</string>
+    <string name="recipe_hoffmann_french_press_title">Френч-пресс Хоффмана</string>
+    <string name="recipe_hoffmann_french_press_description">Долгий настой без прожима. Помол средне-крупный. Вода — кипяток. На 2 чашки.</string>
+    <string name="recipe_wac2022_title">Джибби Литтл (WAC 2022)</string>
+    <string name="recipe_wac2022_description">Чемпион мира по аэропрессу 2022 (Австралия). Аэропресс перевёрнут. Вода 90 °C. После прожима разбавьте до 150 г.</string>
+    <string name="recipe_wac2019_title">Венделин ван Бюнник (WAC 2019)</string>
+    <string name="recipe_wac2019_description">Чемпион мира по аэропрессу 2019 (Нидерланды). Много кофе, короткий настой, разбавление после прожима. Аэропресс перевёрнут. Вода 92 °C.</string>
+    <string name="recipe_step_open_valve">Откройте клапан</string>
+    <string name="recipe_step_break_crust">Разбейте корку</string>
+    <string name="recipe_step_skim">Снимите пену</string>
+    <string name="recipe_step_cap">Наденьте крышку</string>
+    <string name="recipe_note_valve_open">Клапан открыт, вода 90 °C</string>
+    <string name="recipe_note_valve_close_70">Закройте клапан, вода 70 °C</string>
+    <string name="recipe_note_all_at_once">Всю воду сразу</string>
+    <string name="recipe_note_break_crust">Ложкой перемешайте верхний слой</string>
+    <string name="recipe_note_skim">Двумя ложками уберите пену и частицы сверху</string>
+    <string name="recipe_note_up_to_8_min">Можно до 8 минут</string>
+    <string name="recipe_note_inverted">Аэропресс перевёрнут</string>
+    <string name="recipe_note_stir_35">Мягко, 35 движений</string>
+    <string name="recipe_note_stir_20_firm">Энергично, 20 движений</string>
+    <string name="recipe_note_remove_air">Выдавите воздух</string>
+    <string name="recipe_note_press_all">До конца</string>
+    <string name="recipe_hint_drawdown_300">Пролив должен закончиться к 3:00</string>
+    <string name="recipe_hint_plunge_to_surface">Опустите поршень только до поверхности и медленно разлейте</string>
+    <string name="recipe_hint_dilute_150">Разбавьте горячей водой до 150 г</string>
+    <string name="recipe_hint_dilute_100">Разбавьте горячей водой, около 100 г, по вкусу</string>
+    <string name="recipe_group_french_press">Френч-пресс</string>
+    <string name="difficulty_easy">Просто</string>
+    <string name="difficulty_medium">Средне</string>
+    <string name="difficulty_hard">Сложно</string>
+
+    <string name="recipe_wbrc2024_title">Мартин Вёльфль (WBrC 2024)</string>
+    <string name="recipe_wbrc2024_description">Чемпион мира по заварке 2024 (Австрия). Четыре пролива, конец в 2:00. Помол средний. Вода 93 °C. На соревнованиях — плоскодонная воронка Orea.</string>
+    <string name="recipe_wbrc2022_title">Шерри Хсу (WBrC 2022)</string>
+    <string name="recipe_wbrc2022_description">Чемпион мира по заварке 2022 (Тайвань). Четыре пролива по 50 г каждые 30 секунд: первый — водой 70 °C, остальные — 95 °C. Помол средне-крупный. На соревнованиях — плоскодонная воронка Orea.</string>
+    <string name="recipe_fukahori_switch_title">Эми Фукахори (WBrC 2018)</string>
+    <string name="recipe_fukahori_switch_description">Чемпион мира по заварке 2018 (Швейцария). Её простой рецепт для Switch из кофеен MAME. Помол средне-крупный.</string>
+    <string name="recipe_note_water_70">Вода 70 °C</string>
+    <string name="recipe_note_water_95">Дальше вода 95 °C</string>
+    <string name="recipe_note_valve_closed">Клапан закрыт</string>
+    <string name="recipe_note_open_pour_center">Откройте клапан, лейте в центр без остановки</string>
+    <string name="recipe_note_until_drained">Пока всё не стечёт</string>
+    <string name="recipe_hint_drain">Дождитесь, пока всё стечёт</string>
+
+    <!-- Свои рецепты и редактор рецепта -->
+    <string name="recipe_group_mine">Мои</string>
+    <string name="recipe_new">Новый рецепт</string>
+    <string name="recipe_actions">Действия с рецептом</string>
+    <string name="recipe_action_edit">Изменить</string>
+    <string name="recipe_action_copy">Копировать</string>
+    <string name="recipe_action_delete">Удалить</string>
+    <string name="recipe_delete_title">Удалить рецепт «%1$s»?</string>
+    <string name="recipe_copy_title">%1$s (копия)</string>
+    <string name="editor_title_new">Новый рецепт</string>
+    <string name="editor_title_edit">Изменить рецепт</string>
+    <string name="editor_field_title">Название</string>
+    <string name="editor_field_dose">Доза по умолчанию</string>
+    <string name="editor_field_category">Оборудование</string>
+    <string name="editor_field_description">Описание</string>
+    <string name="editor_item_step">Шаг</string>
+    <string name="editor_item_hint">Подпись</string>
+    <string name="editor_add">Добавить шаг или подпись</string>
+    <string name="editor_field_duration">Длительность</string>
+    <string name="editor_duration_hint">Минуты и секунды, м:сс</string>
+    <string name="editor_field_target">Рубеж воды</string>
+    <string name="editor_target_hint">Сколько всего налито к концу шага при дозе по умолчанию; пусто — без воды</string>
+    <string name="editor_field_note">Комментарий</string>
+    <string name="editor_show_time">Крупно — время до конца шага</string>
+    <string name="editor_field_hint_text">Текст</string>
+    <string name="editor_move_up">Выше</string>
+    <string name="editor_move_down">Ниже</string>
+    <string name="editor_delete_item">Удалить</string>
+    <string name="editor_cancel">Отменить</string>
+    <string name="editor_save">Сохранить</string>
+    <string name="editor_discard_title">Отменить изменения?</string>
+    <string name="editor_keep_editing">Продолжить редактирование</string>
+    <string name="editor_discard">Отменить изменения</string>
+    <string name="editor_error_empty">Заполните поле</string>
+    <string name="editor_error_grams">Только целые граммы</string>
+    <string name="editor_error_duration">Введите м:сс, секунд не больше 59</string>
+    <string name="editor_error_zero">Должно быть больше нуля</string>
+    <string name="editor_error_below_previous">Не может быть меньше рубежа выше (%1$s)</string>
+    <string name="editor_error_no_steps">Добавьте хотя бы один шаг</string>
+    <string name="editor_save_failed">Не удалось сохранить рецепт</string>
+</resources>

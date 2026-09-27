@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Экран журнала BLE (только debug-сборка) -->
+    <string name="journal_share">Поделиться</string>
+    <string name="journal_clear">Очистить</string>
+    <string name="journal_share_chooser">Поделиться журналом</string>
+    <string name="journal_all">Всё</string>
+    <string name="journal_notable">Важное</string>
+    <string name="journal_notable_only">Только важные события</string>
+</resources>

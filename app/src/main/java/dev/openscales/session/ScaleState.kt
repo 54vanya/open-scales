@@ -43,7 +43,8 @@ data class ScaleState(
     val address: String? = null,
     val name: String? = null,
     val model: ScaleModel = ScaleModel.UNKNOWN,
-    val error: String? = null,
+    /** Почему последняя попытка не удалась; текст на языке интерфейса подбирает UI. */
+    val error: ConnectionError? = null,
     val weight: Float? = null,
     val flowRate: Float = 0f,
     val unit: WeightUnit = WeightUnit.GRAM,
@@ -57,3 +58,26 @@ data class ScaleState(
 ) {
     val isReady: Boolean get() = phase == ConnectionPhase.READY
 }
+
+/** Таймер весов из кадра веса: состояние из последнего ответа `0x02` и секунды. */
+data class TimerReport(val state: TimerState, val seconds: Int)
+
+/**
+ * Причина неудачи подключения. В состояние попадает причина, а не фраза: текст на языке интерфейса выбирает UI,
+ * а подробности (сообщение исключения, статус GATT) уходят только в журнал.
+ */
+sealed interface ConnectionError {
+    data object NotTimemore : ConnectionError
+    data object PairingNotStarted : ConnectionError
+    data object PairingRejected : ConnectionError
+    data object PairingTimeout : ConnectionError
+    data object NoModel : ConnectionError
+    data object Lost : ConnectionError
+    data object DroppedWhileConnecting : ConnectionError
+
+    /** Прочие сбои транспорта (таймауты GATT, ошибки статуса); [detail] — для журнала. */
+    data class Failed(val detail: String) : ConnectionError
+}
+
+/** Сбой подключения с известной причиной; сообщение — для журнала. */
+class ConnectionException(val reason: ConnectionError, message: String) : Exception(message)

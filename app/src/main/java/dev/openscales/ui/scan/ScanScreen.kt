@@ -3,6 +3,8 @@ package dev.openscales.ui.scan
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -24,7 +26,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.ListItemDefaults
-import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedListItem
@@ -37,12 +38,18 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.foundation.layout.Row
 import dev.openscales.R
 import dev.openscales.ble.DiscoveredScale
 import dev.openscales.data.SavedDevice
 import dev.openscales.protocol.ScaleModel
 import dev.openscales.session.ScaleState
+import dev.openscales.ui.components.BusyIndicator
 import dev.openscales.ui.components.labelRes
+import dev.openscales.ui.components.messageRes
+import dev.openscales.ui.scale.ScaleLink
+import dev.openscales.ui.scale.scaleLink
 import dev.openscales.ui.theme.OpenScalesTheme
 
 enum class BlePrerequisite { OK, NO_PERMISSION, BLUETOOTH_OFF }
@@ -59,7 +66,30 @@ fun ScanScreen(
     onStartScan: () -> Unit,
     onStopScan: () -> Unit,
     onSelect: (address: String, name: String, model: ScaleModel) -> Unit,
+    /** Нажатие на строку запомненных весов: подключение или карточка — по [savedRowAction]. */
+    onSavedClick: (SavedDevice) -> Unit = {},
+    /** Шестерёнка в строке запомненных весов — карточка весов. */
+    onOpenScale: (address: String) -> Unit = {},
+    /** Только debug-сборка: виртуальные весы. Видны всегда — Bluetooth и разрешения им не нужны. */
+    virtualScale: DiscoveredScale? = null,
+    onVirtualClick: () -> Unit = {},
 ) {
+    val virtual: (@Composable () -> Unit)? = virtualScale?.let { device ->
+        {
+            SectionHeader(R.string.scan_virtual)
+            DeviceItem(
+                title = device.name,
+                model = device.model,
+                rssi = null,
+                bonded = false,
+                scale = scale,
+                address = device.address,
+                index = 0,
+                count = 1,
+                onClick = onVirtualClick,
+            )
+        }
+    }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -77,7 +107,7 @@ fun ScanScreen(
                     }
                 },
                 actions = {
-                    if (scan.scanning) LoadingIndicator(Modifier.padding(end = 12.dp).size(32.dp))
+                    if (scan.scanning) BusyIndicator(Modifier.padding(end = 16.dp))
                 },
                 scrollBehavior = scrollBehavior,
             )
@@ -95,6 +125,7 @@ fun ScanScreen(
         when (prerequisite) {
             BlePrerequisite.NO_PERMISSION -> Prerequisite(
                 padding,
+                virtual,
                 R.string.permission_title,
                 R.string.permission_text,
                 R.string.permission_grant,
@@ -103,20 +134,32 @@ fun ScanScreen(
 
             BlePrerequisite.BLUETOOTH_OFF -> Prerequisite(
                 padding,
+                virtual,
                 R.string.bluetooth_off_title,
                 R.string.bluetooth_off_text,
                 R.string.bluetooth_enable,
                 onEnableBluetooth,
             )
 
-            BlePrerequisite.OK -> DeviceList(padding, scan, scale, saved, onSelect)
+            BlePrerequisite.OK -> DeviceList(padding, scan, scale, saved, onSelect, onSavedClick, onOpenScale, virtualScale, virtual)
         }
     }
 }
 
 @Composable
-private fun Prerequisite(padding: PaddingValues, title: Int, text: Int, action: Int, onAction: () -> Unit) {
+private fun Prerequisite(
+    padding: PaddingValues,
+    virtual: (@Composable () -> Unit)?,
+    title: Int,
+    text: Int,
+    action: Int,
+    onAction: () -> Unit,
+) {
     Column(Modifier.padding(padding).padding(16.dp)) {
+        if (virtual != null) {
+            virtual()
+            Spacer(Modifier.height(16.dp))
+        }
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(stringResource(title), style = MaterialTheme.typography.titleLarge)
@@ -134,7 +177,13 @@ private fun DeviceList(
     scale: ScaleState,
     saved: SavedDevice?,
     onSelect: (String, String, ScaleModel) -> Unit,
+    onSavedClick: (SavedDevice) -> Unit,
+    onOpenScale: (String) -> Unit,
+    virtualScale: DiscoveredScale?,
+    virtual: (@Composable () -> Unit)?,
 ) {
+    // Запомненные виртуальные весы показываются в своей секции, а не в «Мои весы».
+    val shownSaved = saved?.takeIf { it.address != virtualScale?.address }
     val found = scan.devices.filterNot { it.address == saved?.address }
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -146,20 +195,17 @@ private fun DeviceList(
         ),
         verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
     ) {
-        if (saved != null) {
+        if (virtual != null) item { virtual() }
+        if (shownSaved != null) {
             item { SectionHeader(R.string.scan_saved) }
             item {
-                val seen = scan.devices.firstOrNull { it.address == saved.address }
-                DeviceItem(
-                    title = saved.name,
-                    model = saved.model,
+                val seen = scan.devices.firstOrNull { it.address == shownSaved.address }
+                SavedScaleItem(
+                    saved = shownSaved,
                     rssi = seen?.rssi,
-                    bonded = true,
                     scale = scale,
-                    address = saved.address,
-                    index = 0,
-                    count = 1,
-                    onClick = { onSelect(saved.address, saved.name, saved.model) },
+                    onClick = { onSavedClick(shownSaved) },
+                    onOpenScale = { onOpenScale(shownSaved.address) },
                 )
             }
         }
@@ -167,7 +213,7 @@ private fun DeviceList(
         if (found.isEmpty()) {
             item {
                 Text(
-                    scan.error ?: stringResource(R.string.scan_empty),
+                    stringResource(scan.error?.messageRes ?: R.string.scan_empty),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(vertical = 8.dp),
@@ -187,6 +233,56 @@ private fun DeviceList(
                 onClick = { onSelect(device.address, device.name, device.model) },
             )
         }
+    }
+}
+
+/**
+ * Строка запомненных весов: состояние (подключены с зарядом, подключаются, в эфире, не в сети) и шестерёнка,
+ * открывающая карточку весов.
+ */
+@Composable
+private fun SavedScaleItem(
+    saved: SavedDevice,
+    rssi: Int?,
+    scale: ScaleState,
+    onClick: () -> Unit,
+    onOpenScale: () -> Unit,
+) {
+    val link = scaleLink(saved.address, scale)
+    val isCurrent = scale.address.equals(saved.address, ignoreCase = true)
+    val modelText = if (saved.model.isKnown) saved.model.displayName else saved.address
+    SegmentedListItem(
+        onClick = onClick,
+        shapes = ListItemDefaults.segmentedShapes(0, 1),
+        leadingContent = {
+            Icon(if (link == ScaleLink.CONNECTED) Icons.Rounded.BluetoothConnected else Icons.Rounded.Scale, null)
+        },
+        supportingContent = {
+            Text(
+                when {
+                    link == ScaleLink.CONNECTED -> scale.batteryPercent
+                        ?.let { stringResource(R.string.scan_status_connected, it) }
+                        ?: stringResource(R.string.phase_ready)
+                    link == ScaleLink.CONNECTING -> stringResource(
+                        if (scale.reconnecting && !scale.phase.isBusy) R.string.reconnecting else scale.phase.labelRes(),
+                    )
+                    isCurrent && scale.error != null -> stringResource(scale.error.messageRes())
+                    rssi != null -> stringResource(R.string.scan_rssi, modelText, rssi)
+                    else -> stringResource(R.string.scan_offline)
+                },
+            )
+        },
+        trailingContent = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (link == ScaleLink.CONNECTING) BusyIndicator()
+                IconButton(onClick = onOpenScale) {
+                    Icon(Icons.Rounded.Settings, stringResource(R.string.scan_scale_settings, saved.name))
+                }
+            }
+        },
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(saved.name)
     }
 }
 
@@ -231,7 +327,7 @@ private fun DeviceItem(
             Text(
                 when {
                     isCurrent && scale.phase.isBusy -> stringResource(scale.phase.labelRes())
-                    isCurrent && scale.error != null -> scale.error
+                    isCurrent && scale.error != null -> stringResource(scale.error.messageRes())
                     rssi != null -> stringResource(R.string.scan_rssi, modelText, rssi) +
                         if (bonded) " · " + stringResource(R.string.scan_bonded) else ""
 
@@ -241,7 +337,7 @@ private fun DeviceItem(
         },
         trailingContent = {
             when {
-                isCurrent && scale.phase.isBusy -> LoadingIndicator(Modifier.size(32.dp))
+                isCurrent && scale.phase.isBusy -> BusyIndicator()
                 isCurrent && scale.isReady -> Icon(
                     Icons.Rounded.CheckCircle,
                     contentDescription = stringResource(R.string.phase_ready),

@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import dev.openscales.OpenScalesApp
 import dev.openscales.ble.DiscoveredScale
+import dev.openscales.ui.ScanError
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,7 +18,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 data class ScanUiState(
     val scanning: Boolean = false,
     val devices: List<DiscoveredScale> = emptyList(),
-    val error: String? = null,
+    val error: ScanError? = null,
 )
 
 class ScanViewModel(application: Application) : AndroidViewModel(application) {
@@ -43,7 +44,7 @@ class ScanViewModel(application: Application) : AndroidViewModel(application) {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _state.update { it.copy(error = e.message) }
+                _state.update { it.copy(error = ScanError.of(e)) }
             } finally {
                 _state.update { it.copy(scanning = false) }
             }

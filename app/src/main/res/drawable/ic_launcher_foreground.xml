@@ -1,18 +1,33 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Воронка-пуровер над весами с падающей каплей. Холст адаптивной иконки 108×108, всё — в безопасном круге r=33. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+    <!-- Конус воронки -->
+    <path
+        android:fillColor="#F4E4D4"
+        android:strokeColor="#F4E4D4"
+        android:strokeWidth="2"
+        android:strokeLineJoin="round"
+        android:pathData="M35,33H73L60.5,57H47.5Z" />
+    <!-- Ободок -->
+    <path
+        android:fillColor="#F4E4D4"
+        android:pathData="M34.5,30h39a2.5,2.5 0,0 1,0 5h-39a2.5,2.5 0,0 1,0 -5z" />
+    <!-- Рёбра -->
+    <path
+        android:strokeColor="#C9A58A"
+        android:strokeWidth="1.6"
+        android:strokeLineCap="round"
+        android:pathData="M47,38L52,53M61,38L56,53" />
+    <!-- Капля -->
+    <path
+        android:fillColor="#E0894A"
+        android:pathData="M54,60C52.3,62.6 51,64.3 51,65.8A3,3 0,0 0,57 65.8C57,64.3 55.7,62.6 54,60Z" />
     <!-- Платформа весов -->
     <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M30,62h48a6,6 0,0 1,6 6v4a6,6 0,0 1,-6 6H30a6,6 0,0 1,-6 -6v-4a6,6 0,0 1,6 -6z" />
-    <!-- Дисплей -->
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M40,36h28a4,4 0,0 1,4 4v12a4,4 0,0 1,-4 4H40a4,4 0,0 1,-4 -4V40a4,4 0,0 1,4 -4z" />
-    <path
-        android:fillColor="#1B1B1F"
-        android:pathData="M44,42h4v8h-4zM52,42h4v8h-4zM60,42h4v8h-4z" />
+        android:fillColor="#F4E4D4"
+        android:pathData="M36,72h36a3,3 0,0 1,0 6h-36a3,3 0,0 1,0 -6z" />
 </vector>

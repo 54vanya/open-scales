@@ -46,6 +46,19 @@
             android:exported="false"
             android:parentActivityName=".MainActivity" />
         <activity
+            android:name=".ui.scale.ScaleDetailsActivity"
+            android:exported="false"
+            android:parentActivityName=".ui.scan.ScanActivity" />
+        <activity
+            android:name=".ui.brew.BrewActivity"
+            android:exported="false"
+            android:parentActivityName=".MainActivity" />
+        <activity
+            android:name=".ui.editor.RecipeEditorActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize"
+            android:parentActivityName=".MainActivity" />
+        <activity
             android:name=".ui.settings.SettingsActivity"
             android:exported="false"
             android:parentActivityName=".MainActivity"

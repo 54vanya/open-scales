@@ -9,10 +9,17 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import dev.openscales.OpenScalesApp
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
+import dev.openscales.R
 import androidx.compose.ui.unit.sp
 
 // Запасная палитра для Android < 12: тёплый «кофейный» акцент.
@@ -60,12 +67,36 @@ fun OpenScalesTheme(
     )
 }
 
-/** Цифры веса: табличные, чтобы значение не «прыгало» при смене цифр. */
+/** Тема экранов приложения: собственная палитра или цвета обоев — по настройке «Собственные цвета приложения». */
+@Composable
+fun AppTheme(content: @Composable () -> Unit) {
+    val app = LocalContext.current.applicationContext as OpenScalesApp
+    val ownColors by app.appearance.ownColors.collectAsState()
+    OpenScalesTheme(dynamicColor = !ownColors, content = content)
+}
+
+/**
+ * Шрифт цифр показаний — урезанный Google Sans Flex (`tools/make-digits-font.sh`), одинаковый на всех телефонах:
+ * в системном Roboto нет перечёркнутого нуля. Оптический размер Compose сам не выставляет — задаём по номиналу.
+ */
+private fun digitsFamily(opticalSize: Float) = FontFamily(
+    Font(
+        R.font.readout_digits,
+        FontWeight.Medium,
+        variationSettings = FontVariation.Settings(
+            FontVariation.weight(FontWeight.Medium.weight),
+            FontVariation.Setting("opsz", opticalSize),
+        ),
+    ),
+)
+
+/** Цифры таймера и веса: табличные, чтобы значение не «прыгало» при смене цифр. */
 val WeightTextStyle = TextStyle(
     fontSize = 88.sp,
     lineHeight = 96.sp,
+    fontFamily = digitsFamily(88f),
     fontWeight = FontWeight.Medium,
-    fontFeatureSettings = "tnum",
+    fontFeatureSettings = digitFeatures(slashedZero = true),
     letterSpacing = (-1).sp,
 )
 
@@ -76,9 +107,17 @@ val UnitTextStyle = TextStyle(
     fontWeight = FontWeight.Normal,
 )
 
+/** Цифры потока — мельче таймера и веса, тот же шрифт. */
 val DigitsTextStyle = TextStyle(
     fontSize = 32.sp,
     lineHeight = 40.sp,
+    fontFamily = digitsFamily(32f),
     fontWeight = FontWeight.Medium,
-    fontFeatureSettings = "tnum",
+    fontFeatureSettings = digitFeatures(slashedZero = true),
 )
+
+/** OpenType-фичи цифр: табличные всегда, перечёркнутый ноль — по настройке (ширина глифа та же). */
+fun digitFeatures(slashedZero: Boolean) = if (slashedZero) "tnum, zero" else "tnum"
+
+/** Стиль цифр с нулём по настройке «Перечёркнутый ноль». */
+fun TextStyle.withSlashedZero(slashedZero: Boolean) = copy(fontFeatureSettings = digitFeatures(slashedZero))

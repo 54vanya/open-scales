@@ -8,13 +8,14 @@ import dev.openscales.protocol.Cmd
 import dev.openscales.protocol.Frame
 import dev.openscales.protocol.FrameCodec
 import dev.openscales.protocol.GattIds
+import dev.openscales.sim.ScaleEmulator
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import java.util.UUID
 
 /**
- * Эмулятор весов протокола 2025 для тестов: отвечает на чтения из [readResponses],
- * подтверждает записи и позволяет сымитировать сбои.
+ * Весы протокола 2025 для тестов: протокол — общий с виртуальными весами [ScaleEmulator], поверх него —
+ * подменённые ответы [readResponses] и сбои транспорта. Кадры веса сам не шлёт: тесты подают их вручную.
  */
 class FakeBleTransport(
     override val address: String = "C8:47:8C:00:11:22",
@@ -24,17 +25,27 @@ class FakeBleTransport(
 
     override val events = MutableSharedFlow<TransportEvent>(extraBufferCapacity = 256)
 
-    val readResponses = mutableMapOf(
-        Cmd.BATTERY to byteArrayOf(3, 80),
-        Cmd.MODEL to "TES016".toByteArray(),
-        Cmd.WEIGHT_UNIT to byteArrayOf(0),
-        Cmd.MODE_STAGE to byteArrayOf(1, 1),
-        Cmd.TIMER to byteArrayOf(3),
-        Cmd.DEVICE_NAME to "Basic 3".toByteArray(),
-    )
+    /**
+     * Протокол отыгрывает общее с виртуальными весами ядро; готовые ответы ниже важнее эмуляции —
+     * тесты подменяют их, чтобы задать, что «прислали весы».
+     */
+    val emulator = ScaleEmulator(nowMs = { 0L }, defaultModel = "TES016", defaultName = "Basic 3")
+
+    val readResponses: MutableMap<Int, ByteArray> = emulator.readOverrides.apply {
+        putAll(
+            mapOf(
+                Cmd.BATTERY to byteArrayOf(3, 80),
+                Cmd.MODEL to "TES016".toByteArray(),
+                Cmd.WEIGHT_UNIT to byteArrayOf(0),
+                Cmd.MODE_STAGE to byteArrayOf(1, 1),
+                Cmd.TIMER to byteArrayOf(3),
+                Cmd.DEVICE_NAME to "Basic 3".toByteArray(),
+            ),
+        )
+    }
 
     /** Коды, на запись которых весы отвечают отказом. */
-    val rejectedWrites = mutableSetOf<Int>()
+    val rejectedWrites: MutableSet<Int> get() = emulator.rejected
 
     /** Коды, на которые весы не отвечают вовсе. */
     val silentCommands = mutableSetOf<Int>()
@@ -81,19 +92,20 @@ class FakeBleTransport(
         val frame = FrameCodec.split(value).single()
         frames += frame
         if (frame.cmd in silentCommands) return
-        when (frame.type) {
-            Frame.TYPE_READ -> readResponses[frame.cmd]?.let { emitFrame(Frame.TYPE_READ, frame.cmd, it) }
-            Frame.TYPE_WRITE -> emitFrame(
-                Frame.TYPE_WRITE,
-                frame.cmd,
-                byteArrayOf(if (frame.cmd in rejectedWrites) 0 else 1),
-            )
-        }
+        // Разрыв связи после выключения или сброса тесты задают сами — здесь только ответы.
+        emulator.onFrame(frame).frames.forEach { emitFrame(it.type, it.cmd, it.payload) }
     }
 
     fun emitFrame(type: Int, cmd: Int, payload: ByteArray) {
         events.tryEmit(TransportEvent.Notification(GattIds.NOTIFY_2025, FrameCodec.encode(type, cmd, payload)))
     }
+
+    /** Кадр веса 18.3 г, поток 2.4 г/с с временем таймера весов [seconds]. */
+    fun emitWeight(seconds: Int) = emitFrame(
+        Frame.TYPE_READ,
+        Cmd.WEIGHT,
+        byteArrayOf(0, 0, 0, 0xB7.toByte(), 0, 0x18, (seconds ushr 8).toByte(), seconds.toByte()),
+    )
 
     fun disconnectFromDevice(status: Int = 19) {
         events.tryEmit(TransportEvent.Disconnected(status))

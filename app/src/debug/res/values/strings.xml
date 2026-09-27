@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- BLE log screen (debug build only) -->
+    <string name="journal_share">Share</string>
+    <string name="journal_clear">Clear</string>
+    <string name="journal_share_chooser">Share log</string>
+    <string name="journal_all">All</string>
+    <string name="journal_notable">Notable</string>
+    <string name="journal_notable_only">Notable events only</string>
+</resources>

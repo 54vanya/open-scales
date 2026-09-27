@@ -1,5 +1,6 @@
 package dev.openscales.ble
 
+import android.os.SystemClock
 import dev.openscales.protocol.Cmd
 import dev.openscales.protocol.FrameCodec
 import dev.openscales.protocol.GattIds
@@ -14,42 +15,75 @@ import java.util.Date
 import java.util.Locale
 import java.util.UUID
 
-/** Кольцевой журнал BLE-обмена для отладки на реальных весах. Используется только в debug-сборке. */
+/**
+ * Кольцевой журнал BLE-обмена для отладки на реальных весах. Используется только в debug-сборке.
+ * Важные записи дублируются в отдельный буфер [notable]: поток кадров вытесняет общий журнал за ~3 минуты,
+ * а редкий сбой должен дождаться, пока его посмотрят.
+ */
 class BleJournal(
     private val capacity: Int = DEFAULT_CAPACITY,
+    private val notableCapacity: Int = NOTABLE_CAPACITY,
     private val clock: () -> Long = System::currentTimeMillis,
 ) {
-    enum class Kind { PHASE, BOND, MTU, NOTIFY, TX, RX, ERROR, INFO }
+    /**
+     * [TIMER] — тики секундомера, [STALL] — главный поток был занят дольше порога (сторож в debug-сборке),
+     * [GAP] — весы дольше порога не присылали кадров.
+     */
+    enum class Kind(val notableByDefault: Boolean = true) {
+        PHASE, BOND, MTU, NOTIFY, TX(false), RX(false), ERROR, INFO, TIMER(false), STALL, GAP, UI(false)
+    }
 
     data class Entry(val timeMs: Long, val kind: Kind, val text: String)
 
     private val buffer = ArrayDeque<Entry>(capacity)
+    private val notableBuffer = ArrayDeque<Entry>(notableCapacity)
     private val _entries = MutableStateFlow<List<Entry>>(emptyList())
+    private val _notable = MutableStateFlow<List<Entry>>(emptyList())
     val entries: StateFlow<List<Entry>> = _entries.asStateFlow()
+    val notable: StateFlow<List<Entry>> = _notable.asStateFlow()
 
-    fun add(kind: Kind, text: String) {
+    fun add(kind: Kind, text: String, notable: Boolean = kind.notableByDefault) {
         synchronized(buffer) {
-            if (buffer.size == capacity) buffer.removeFirst()
-            buffer.addLast(Entry(clock(), kind, text))
+            val entry = Entry(clock(), kind, text)
+            buffer.addBounded(entry, capacity)
             _entries.value = buffer.toList()
+            if (notable) {
+                notableBuffer.addBounded(entry, notableCapacity)
+                _notable.value = notableBuffer.toList()
+            }
         }
     }
 
     fun clear() {
         synchronized(buffer) {
             buffer.clear()
+            notableBuffer.clear()
             _entries.value = emptyList()
+            _notable.value = emptyList()
         }
     }
 
     fun export(header: String): String = buildString {
         appendLine(header)
         appendLine()
+        appendLine("== Notable events ==")
+        notable.value.forEach { appendLine(format(it)) }
+        appendLine()
+        appendLine("== Full log ==")
         entries.value.forEach { appendLine(format(it)) }
+    }
+
+    private fun ArrayDeque<Entry>.addBounded(entry: Entry, limit: Int) {
+        if (size == limit) removeFirst()
+        addLast(entry)
     }
 
     companion object {
         const val DEFAULT_CAPACITY = 2000
+        const val NOTABLE_CAPACITY = 500
+
+        /** Промежуток между кадрами протокола 2025, после которого пишется [Kind.GAP]: обычно 90–120 мс. */
+        const val FRAME_GAP_MS = 300L
 
         private val timeFormat = ThreadLocal.withInitial { SimpleDateFormat("HH:mm:ss.SSS", Locale.US) }
 
@@ -82,14 +116,32 @@ class BleJournal(
 class LoggingBleTransport(
     private val delegate: BleTransport,
     private val journal: BleJournal,
+    private val nowMs: () -> Long = SystemClock::elapsedRealtime,
 ) : BleTransport by delegate {
+
+    /** Время прошлого кадра протокола 2025; весы шлют вес сами ~10 Гц, так что долгая тишина — сбой. */
+    private var lastFrameAt: Long? = null
 
     override val events: Flow<TransportEvent> = delegate.events.onEach { e ->
         when (e) {
-            is TransportEvent.Notification -> journal.add(BleJournal.Kind.RX, BleJournal.describe(e.characteristic, e.value))
+            is TransportEvent.Notification -> {
+                if (e.characteristic == GattIds.NOTIFY_2025) noteFrame()
+                journal.add(BleJournal.Kind.RX, BleJournal.describe(e.characteristic, e.value))
+            }
             is TransportEvent.BondChanged -> journal.add(BleJournal.Kind.BOND, "${e.previous} -> ${e.state}")
-            is TransportEvent.Disconnected -> journal.add(BleJournal.Kind.ERROR, "disconnected, status=${e.status}")
+            is TransportEvent.Disconnected -> {
+                lastFrameAt = null
+                journal.add(BleJournal.Kind.ERROR, "disconnected, status=${e.status}")
+            }
         }
+    }
+
+    private fun noteFrame() {
+        val now = nowMs()
+        lastFrameAt?.let { last ->
+            if (now - last > BleJournal.FRAME_GAP_MS) journal.add(BleJournal.Kind.GAP, "no frames for ${now - last}ms")
+        }
+        lastFrameAt = now
     }
 
     private suspend fun <T> logged(kind: BleJournal.Kind, what: String, block: suspend () -> T): T =

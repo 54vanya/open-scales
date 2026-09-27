@@ -3,6 +3,7 @@ package dev.openscales.sound
 import dev.openscales.data.AppSettings
 import dev.openscales.data.BeepNote
 import dev.openscales.data.InMemoryAppSettingsStore
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -48,7 +49,8 @@ class ButtonSoundTest {
 
     @Test
     fun `warm-up follows the dashboard and the sound setting`() = runTest {
-        val store = InMemoryAppSettingsStore()
+        // Сигналы шагов тоже держат тракт готовым — здесь проверяем только звук кнопок.
+        val store = InMemoryAppSettingsStore(AppSettings(stepSignals = false))
         val beeper = RecordingBeeper()
         val sound = ButtonSound(backgroundScope, store, beeper)
         runCurrent()
@@ -94,5 +96,38 @@ class ButtonSoundTest {
         assertTrue(pcm.all { abs(it.toInt()) < Short.MAX_VALUE })
         // Плавный фронт: в первую миллисекунду амплитуда мала.
         assertTrue(pcm.take(48).all { abs(it.toInt()) < Short.MAX_VALUE / 5 })
+    }
+
+    @Test
+    fun `step signals follow their own setting`() = runTest {
+        val store = InMemoryAppSettingsStore(AppSettings(beepEnabled = false, beepNote = BeepNote.E6, stepSignals = false))
+        val beeper = RecordingBeeper()
+        val sound = ButtonSound(backgroundScope, store, beeper)
+        runCurrent()
+        sound.onStepSignal(StepSignal.STEP)
+        assertTrue(beeper.played.isEmpty()) // сигналы выключены
+
+        store.setStepSignals(true)
+        runCurrent()
+        sound.onStepSignal(StepSignal.STEP)
+        assertEquals(listOf(BeepNote.E6), beeper.played) // звук кнопок выключен, а сигнал звучит
+
+        sound.onStepSignal(StepSignal.TARGET)
+        advanceTimeBy(200)
+        runCurrent()
+        assertEquals(3, beeper.played.size) // двойной
+    }
+
+    @Test
+    fun `warm-up also serves step signals`() = runTest {
+        val store = InMemoryAppSettingsStore(AppSettings(beepEnabled = false, stepSignals = false))
+        val beeper = RecordingBeeper()
+        val sound = ButtonSound(backgroundScope, store, beeper)
+        runCurrent()
+        sound.setDashboardVisible(true)
+        assertFalse(beeper.warm)
+        store.setStepSignals(true)
+        runCurrent()
+        assertTrue(beeper.warm)
     }
 }

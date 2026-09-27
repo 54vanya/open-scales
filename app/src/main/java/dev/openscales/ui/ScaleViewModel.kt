@@ -11,7 +11,7 @@ import dev.openscales.protocol.Precision
 import dev.openscales.protocol.ScaleModel
 import dev.openscales.protocol.Sensitivity
 import dev.openscales.protocol.WeightUnit
-import dev.openscales.session.CommandException
+import dev.openscales.recipe.StepWeightMode
 import dev.openscales.session.ScaleSession
 import dev.openscales.session.ScaleState
 import kotlinx.coroutines.CancellationException
@@ -30,8 +30,9 @@ class ScaleViewModel(application: Application) : AndroidViewModel(application) {
     val state: StateFlow<ScaleState> = repository.state
     val savedDevice: StateFlow<SavedDevice?> = repository.savedDevice
 
-    private val _errors = Channel<String>(Channel.BUFFERED)
-    val errors: Flow<String> = _errors.receiveAsFlow()
+    /** Ошибки команд — строковые ресурсы: текст на языке интерфейса выбирает Activity. */
+    private val _errors = Channel<Int>(Channel.BUFFERED)
+    val errors: Flow<Int> = _errors.receiveAsFlow()
 
     fun autoConnect() = repository.autoConnect()
 
@@ -67,12 +68,24 @@ class ScaleViewModel(application: Application) : AndroidViewModel(application) {
         app.appScope.launch { app.appSettingsStore.setKeepScreenOn(keep) }
     }
 
+    fun setSlashedZero(slashed: Boolean) {
+        app.appScope.launch { app.appSettingsStore.setSlashedZero(slashed) }
+    }
+
     fun setSyncTimerWithScale(sync: Boolean) {
         app.appScope.launch { app.appSettingsStore.setSyncTimerWithScale(sync) }
     }
 
     fun setTriggerOnPress(onPress: Boolean) {
         app.appScope.launch { app.appSettingsStore.setTriggerOnPress(onPress) }
+    }
+
+    fun setStepWeightMode(mode: StepWeightMode) {
+        app.appScope.launch { app.appSettingsStore.setStepWeightMode(mode) }
+    }
+
+    fun setStepSignals(enabled: Boolean) {
+        app.appScope.launch { app.appSettingsStore.setStepSignals(enabled) }
     }
 
     fun setBeepNote(note: BeepNote) {
@@ -105,13 +118,8 @@ class ScaleViewModel(application: Application) : AndroidViewModel(application) {
                 block()
             } catch (e: CancellationException) {
                 throw e
-            } catch (e: CommandException) {
-                // Вытесненная команда таймера или повторная тара — не ошибка для пользователя.
-                if (e.kind != CommandException.Kind.CANCELLED || !state.value.isReady) {
-                    _errors.trySend(e.message ?: e.kind.name)
-                }
             } catch (e: Exception) {
-                _errors.trySend(e.message ?: e.javaClass.simpleName)
+                commandErrorRes(e, state.value.isReady)?.let { _errors.trySend(it) }
             }
         }
     }

@@ -25,7 +25,11 @@ import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -44,6 +48,8 @@ class ScaleSession(
     knownModel: ScaleModel = ScaleModel.UNKNOWN,
     knownName: String? = null,
     private val log: (String) -> Unit = { Log.i(TAG, it) },
+    /** Сессия завершилась; вызывается синхронно, до публикации конечного состояния. */
+    private val onEnded: (EndReason) -> Unit = {},
 ) {
     private val scope = CoroutineScope(parentContext + SupervisorJob(parentContext[Job]))
 
@@ -51,6 +57,14 @@ class ScaleSession(
         ScaleState(address = transport.address, model = knownModel, name = knownName),
     )
     val state: StateFlow<ScaleState> = _state.asStateFlow()
+
+    private val _timerReports = MutableSharedFlow<TimerReport>(replay = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+
+    /**
+     * Таймер весов на каждый кадр веса: состояние из последнего `0x02` и секунды из кадра. Идёт только после
+     * того, как рукопожатие прочитало `0x02`: до этого состояние по умолчанию неотличимо от сброшенного таймера.
+     */
+    val timerReports: Flow<TimerReport> = _timerReports.asSharedFlow()
 
     private val ended = CompletableDeferred<EndReason>()
 
@@ -61,6 +75,7 @@ class ScaleSession(
     @Volatile private var legacy = false
     @Volatile private var protocolDataSeen = false
     @Volatile private var pendingEndReason: EndReason? = null
+    @Volatile private var timerStateKnown = false
 
     val isLegacy: Boolean get() = legacy
 
@@ -73,7 +88,8 @@ class ScaleSession(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                fail(e.message ?: e.toString())
+                val reason = (e as? ConnectionException)?.reason ?: ConnectionError.Failed(e.message ?: e.toString())
+                fail(reason, e.message ?: e.toString())
             }
         }
     }
@@ -106,7 +122,7 @@ class ScaleSession(
             connectLegacy()
             return
         }
-        if (GattIds.SERVICE_2025 !in services) throw BleException("устройство не похоже на весы Timemore")
+        if (GattIds.SERVICE_2025 !in services) throw ConnectionException(ConnectionError.NotTimemore, "device is not a Timemore scale")
 
         setPhase(ConnectionPhase.BONDING)
         val newlyBonded = ensureBonded()
@@ -140,7 +156,7 @@ class ScaleSession(
             BondState.BONDED -> return false
             BondState.BONDING -> awaitBond(BOND_COMPLETE_TIMEOUT_MS, sawBonding = true)
             BondState.NONE -> {
-                if (!transport.createBond()) throw BleException("не удалось начать сопряжение")
+                if (!transport.createBond()) throw ConnectionException(ConnectionError.PairingNotStarted, "createBond failed")
                 awaitBond(BOND_START_TIMEOUT_MS, sawBonding = false)
             }
         }
@@ -155,11 +171,15 @@ class ScaleSession(
             when (transport.bondState()) {
                 BondState.BONDED -> return
                 BondState.BONDING -> bonding = true
-                BondState.NONE -> if (bonding) throw BleException("сопряжение отклонено")
+                BondState.NONE -> if (bonding) throw ConnectionException(ConnectionError.PairingRejected, "pairing rejected")
             }
             val limit = if (bonding) BOND_COMPLETE_TIMEOUT_MS else startTimeoutMs
             if (waited >= limit) {
-                throw BleException(if (bonding) "сопряжение не завершилось" else "сопряжение не началось")
+                throw if (bonding) {
+                    ConnectionException(ConnectionError.PairingTimeout, "pairing did not finish")
+                } else {
+                    ConnectionException(ConnectionError.PairingNotStarted, "pairing did not start")
+                }
             }
             delay(BOND_POLL_MS)
             waited += BOND_POLL_MS
@@ -175,23 +195,25 @@ class ScaleSession(
         }
         if (!_state.value.model.isKnown) {
             val model = (queue.read(Cmd.MODEL) as? ScaleMessage.Model)?.model ?: ScaleModel.UNKNOWN
-            if (!model.isKnown) throw BleException("весы не сообщили модель")
+            if (!model.isKnown) throw ConnectionException(ConnectionError.NoModel, "scale did not report its model")
         } else {
             optionalRead(Cmd.MODEL)
         }
         optionalRead(Cmd.WEIGHT_UNIT)
         optionalRead(Cmd.MODE_STAGE)
-        optionalRead(Cmd.TIMER)
+        timerStateKnown = optionalRead(Cmd.TIMER)
         optionalRead(Cmd.DEVICE_NAME)
     }
 
-    private suspend fun optionalRead(cmd: Int) {
+    /** @return true, если весы ответили. */
+    private suspend fun optionalRead(cmd: Int): Boolean =
         try {
             queue.read(cmd)
+            true
         } catch (e: CommandException) {
             log("optional read 0x%02X failed: %s".format(cmd, e.message))
+            false
         }
-    }
 
     private suspend fun connectLegacy() {
         legacy = true
@@ -227,6 +249,9 @@ class ScaleSession(
         for (frame in frames) {
             val message = MessageDecoder.decode(frame, _state.value.unit)
             apply(message)
+            if (message is ScaleMessage.Weight && timerStateKnown) {
+                _timerReports.tryEmit(TimerReport(_state.value.timerState, message.timeSeconds))
+            }
             queue.onMessage(message)
         }
     }
@@ -268,13 +293,13 @@ class ScaleSession(
         val reason = pendingEndReason ?: if (wasReady) EndReason.LOST else EndReason.FAILED
         log("disconnected status=$status reason=$reason")
         if (reason == EndReason.FAILED) {
-            fail("соединение разорвано во время подключения (status=$status)")
+            fail(ConnectionError.DroppedWhileConnecting, "disconnected while connecting (status=$status)")
             return
         }
         finish(
             reason,
             ConnectionPhase.DISCONNECTED,
-            if (reason == EndReason.LOST) "соединение потеряно" else null,
+            if (reason == EndReason.LOST) ConnectionError.Lost else null,
         )
     }
 
@@ -283,7 +308,7 @@ class ScaleSession(
     // region commands
 
     private fun requireReady() {
-        if (!_state.value.isReady) throw CommandException(CommandException.Kind.CANCELLED, "весы не подключены")
+        if (!_state.value.isReady) throw CommandException(CommandException.Kind.CANCELLED, "scale not connected")
     }
 
     suspend fun tare() {
@@ -456,13 +481,14 @@ class ScaleSession(
         _state.update { it.copy(phase = phase, error = null) }
     }
 
-    private fun fail(message: String) {
+    private fun fail(error: ConnectionError, message: String) {
         log("failed: $message")
-        finish(pendingEndReason ?: EndReason.FAILED, ConnectionPhase.FAILED, message)
+        finish(pendingEndReason ?: EndReason.FAILED, ConnectionPhase.FAILED, error)
     }
 
-    private fun finish(reason: EndReason, phase: ConnectionPhase, error: String?) {
+    private fun finish(reason: EndReason, phase: ConnectionPhase, error: ConnectionError?) {
         if (!ended.complete(reason)) return
+        onEnded(reason)
         val finalPhase = if (reason == EndReason.FAILED) ConnectionPhase.FAILED else phase
         _state.update { it.copy(phase = finalPhase, error = error, flowRate = 0f) }
         queue.close()

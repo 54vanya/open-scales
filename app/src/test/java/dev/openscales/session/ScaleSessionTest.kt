@@ -74,8 +74,28 @@ class ScaleSessionTest {
         settle()
         assertEquals(EndReason.FAILED, s.awaitEnd())
         assertEquals(ConnectionPhase.FAILED, s.state.value.phase)
-        assertTrue(s.state.value.error!!.contains("сопряжение"))
+        assertEquals(ConnectionError.PairingRejected, s.state.value.error)
         assertTrue(t.closeCount > 0)
+    }
+
+    @Test
+    fun `transport failure is reported as a reason, not as the exception text`() = runTest {
+        val t = FakeBleTransport().apply { connectError = "Connect timeout 15000ms" }
+        val (s, _) = session(t, ScaleModel.BASIC3)
+        s.start()
+        settle()
+        assertEquals(ConnectionError.Failed("Connect timeout 15000ms"), s.state.value.error)
+    }
+
+    @Test
+    fun `lost link after ready is reported as Lost`() = runTest {
+        val t = FakeBleTransport()
+        val (s, _) = session(t, ScaleModel.BASIC3)
+        s.start()
+        settle()
+        t.disconnectFromDevice()
+        runCurrent()
+        assertEquals(ConnectionError.Lost, s.state.value.error)
     }
 
     @Test
@@ -143,6 +163,44 @@ class ScaleSessionTest {
         assertEquals(18.3f, state.weight!!, 0.001f)
         assertEquals(2.4f, state.flowRate, 0.001f)
         assertEquals(75, state.timeSeconds)
+    }
+
+    @Test
+    fun `timer reports start only after the handshake has read the scale timer`() = runTest {
+        val t = FakeBleTransport()
+        t.readResponses[Cmd.TIMER] = byteArrayOf(1)
+        val (s, _) = session(t, ScaleModel.BASIC3)
+        val reports = mutableListOf<TimerReport>()
+        backgroundScope.launch { s.timerReports.collect { reports += it } }
+        s.start()
+        runCurrent()
+        // Кадр веса во время подключения: состояние таймера ещё не прочитано.
+        t.emitWeight(seconds = 40)
+        runCurrent()
+        assertTrue(reports.isEmpty())
+
+        settle()
+        // Между кадрами — как у весов, ~100 мс: поток отдаёт только последний отчёт.
+        t.emitWeight(seconds = 41)
+        runCurrent()
+        t.emitWeight(seconds = 42)
+        runCurrent()
+        assertEquals(listOf(TimerReport(TimerState.RUNNING, 41), TimerReport(TimerState.RUNNING, 42)), reports)
+    }
+
+    @Test
+    fun `no timer reports when the scale does not answer the timer read`() = runTest {
+        val t = FakeBleTransport()
+        t.silentCommands += Cmd.TIMER
+        val (s, _) = session(t, ScaleModel.BASIC3)
+        val reports = mutableListOf<TimerReport>()
+        backgroundScope.launch { s.timerReports.collect { reports += it } }
+        s.start()
+        settle()
+        assertTrue(s.state.value.isReady)
+        t.emitWeight(seconds = 41)
+        runCurrent()
+        assertTrue(reports.isEmpty())
     }
 
     @Test

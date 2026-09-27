@@ -1,6 +1,8 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.roborazzi)
 }
 
 android {
@@ -29,6 +31,16 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
+    // Язык переключается в самом приложении, поэтому в пакете нужны все языки сразу — без разбиения бандла по языкам.
+    bundle {
+        language {
+            enableSplit = false
+        }
+    }
+    androidResources {
+        // locales_config.xml для системного выбора языка приложения (Android 13+) — из папок values-*.
+        generateLocaleConfig = true
+    }
     buildFeatures {
         compose = true
         buildConfig = true
@@ -36,7 +48,15 @@ android {
 
     testOptions {
         unitTests.isReturnDefaultValues = true
+        // Robolectric рисует экраны для скриншот-тестов — нужны ресурсы приложения.
+        unitTests.isIncludeAndroidResources = true
     }
+}
+
+// Эталоны одобренных экранов лежат в репозитории: `recordRoborazziDebug` пишет их,
+// `verifyRoborazziDebug` (и обычный `testDebugUnitTest -Proborazzi.test.verify=true`) сверяет.
+roborazzi {
+    outputDir.set(file("src/test/screenshots"))
 }
 
 kotlin {
@@ -56,6 +76,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.kotlinx.serialization.json)
 
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)
@@ -66,4 +87,13 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+    // Скриншот-тесты одобренных экранов: Compose рисуется в JVM через Robolectric, эталоны — в app/src/test/screenshots.
+    testImplementation(libs.robolectric)
+    testImplementation(libs.roborazzi)
+    testImplementation(libs.roborazzi.compose)
+    testImplementation(libs.roborazzi.junit.rule)
+    testImplementation(libs.androidx.test.ext.junit)
+    testImplementation(platform(libs.compose.bom))
+    testImplementation(libs.compose.ui.test.junit4)
+    debugImplementation(libs.compose.ui.test.manifest)
 }

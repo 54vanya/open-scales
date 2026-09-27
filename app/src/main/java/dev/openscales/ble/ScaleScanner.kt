@@ -31,7 +31,7 @@ data class DiscoveredScale(
 class ScaleScanner(private val adapter: BluetoothAdapter) {
 
     fun scan(): Flow<DiscoveredScale> = callbackFlow {
-        val scanner = adapter.bluetoothLeScanner ?: throw BleException("Bluetooth выключен")
+        val scanner = adapter.bluetoothLeScanner ?: throw BluetoothOffException()
         val callback = object : ScanCallback() {
             override fun onScanResult(callbackType: Int, result: ScanResult) {
                 toScale(result)?.let { trySend(it) }
