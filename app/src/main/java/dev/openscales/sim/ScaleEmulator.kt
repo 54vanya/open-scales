@@ -139,7 +139,7 @@ class ScaleEmulator(
         Cmd.SENSITIVITY -> byteArrayOf(5, sensitivity.toByte())
         Cmd.PRECISION -> byteArrayOf(precision.toByte())
         Cmd.BRIGHTNESS -> byteArrayOf(brightness.toByte())
-        // DOT на запрос серийного номера молчит (docs/protocol.md).
+        // DOT на запрос серийного номера молчит — так на реальных весах.
         else -> null
     }
 

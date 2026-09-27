@@ -57,8 +57,8 @@ of the official app:
 - **Charging indicator.** The first byte of the battery reply looks like a charging status, but its encoding isn't
   confirmed, so only the percentage is shown.
 - **Firmware updates.** The official app updates firmware over Cypress OTA with an image from Timemore's server
-  (needs a Timemore account). Open Scales doesn't update firmware; see `docs/firmware.md`.
-- **Everything outside the scale:** Timemore account and cloud, brew recipes and guided brewing, bean inventory
+  (needs a Timemore account). Open Scales doesn't update firmware.
+- **Everything outside the scale:** Timemore account and cloud, bean inventory
   and brew history, sharing, QR codes, help center.
 
 ## Install
@@ -106,9 +106,6 @@ ui/        one Activity per screen: main screen, Scales (search and remembered s
 - Behavior is specified with [OpenSpec](https://github.com/Fission-AI/OpenSpec): specs in `openspec/specs/`,
   changes and their history in `openspec/changes/` (`openspec list`, `openspec list --specs`).
   Artifacts are written in Russian.
-- `docs/protocol.md` — protocol reference with byte layouts, timings, connection parameters and what was
-  verified on real scales.
-- `docs/firmware.md` — what is known about the scales' firmware.
 
 ## Licenses
 
