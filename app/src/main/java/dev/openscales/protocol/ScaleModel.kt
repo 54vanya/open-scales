@@ -1,8 +1,8 @@
 package dev.openscales.protocol
 
 /**
- * Модели весов Timemore Black Mirror. [code] совпадает с `scaleType` оригинального приложения.
- * Возможности — из матрицы `e5/a.java`.
+ * Модели весов Timemore Black Mirror. [code] — номер модели в хранилище запомненных весов.
+ * Возможности (звук, яркость) — какие настройки есть у модели.
  */
 enum class ScaleModel(
     val code: Int,

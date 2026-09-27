@@ -84,7 +84,7 @@ Requires Android 8.0 (API 26) or newer and Bluetooth LE.
   ```
 
 - `tools/dev.sh` — device and emulator harness: install, launch, screenshots, filtered BLE logcat, emulator
-  control, decompiling the original APK. Run it without arguments for the list of commands.
+  control. Run it without arguments for the list of commands.
 - Debug builds have a BLE log screen (bug icon on the main screen) with export, timer ticks and a main-thread
   stall watchdog.
 
@@ -112,5 +112,5 @@ ui/        one Activity per screen: main screen, Scales (search and remembered s
 - The readout digits use a subset of [Google Sans Flex](https://github.com/google/fonts/tree/main/ofl/googlesansflex),
   renamed "Open Scales Digits", under the SIL Open Font License 1.1 (`app/src/main/assets/licenses/readout_digits_OFL.txt`).
   Regenerate it with `tools/make-digits-font.sh`.
-- The project itself has no license chosen yet.
+- Open Scales is licensed under the [GNU General Public License v3.0](LICENSE).
 - Timemore and Black Mirror are trademarks of their owner; this project is not affiliated with Timemore.

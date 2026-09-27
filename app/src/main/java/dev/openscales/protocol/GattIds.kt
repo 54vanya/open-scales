@@ -4,7 +4,7 @@ import java.util.UUID
 
 private fun uuid16(short: String) = UUID.fromString("0000$short-0000-1000-8000-00805f9b34fb")
 
-/** GATT-идентификаторы из `DeviceScanActivity`, `Ble2025DeviceUtils`, `a0`, `v` оригинала. */
+/** GATT-идентификаторы сервисов и характеристик весов. */
 object GattIds {
     val CCCD: UUID = uuid16("2902")
 

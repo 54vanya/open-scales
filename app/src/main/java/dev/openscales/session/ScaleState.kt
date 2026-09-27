@@ -6,7 +6,7 @@ import dev.openscales.protocol.Sensitivity
 import dev.openscales.protocol.TimerState
 import dev.openscales.protocol.WeightUnit
 
-/** Фазы подключения — те же, что `ConnectionPhase` оригинала. */
+/** Фазы подключения. */
 enum class ConnectionPhase {
     DISCONNECTED, CONNECTING, BONDING, SUBSCRIBING, HANDSHAKING, READY, DISCONNECTING, FAILED;
 

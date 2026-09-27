@@ -12,7 +12,7 @@ import org.junit.Test
 
 class ScalesScreenRulesTest {
 
-    private val address = "A4:6D:33:91:E3:82"
+    private val address = "C8:47:8C:00:11:22"
 
     @Test
     fun `link of the saved scale follows the session`() {

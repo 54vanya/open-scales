@@ -328,7 +328,7 @@ fun ScaleDetailsScreen(
     }
 }
 
-private val PreviewSaved = SavedDevice("A4:6D:33:91:E3:82", "TIMEMORE_Dot", ScaleModel.DOT)
+private val PreviewSaved = SavedDevice("C8:47:8C:00:11:22", "TIMEMORE_Dot", ScaleModel.DOT)
 
 private val PreviewActions = ScaleDetailsActions({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {})
 

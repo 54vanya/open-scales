@@ -26,10 +26,10 @@ class Frame(val type: Int, val cmd: Int, val payload: ByteArray) {
 
 object FrameCodec {
 
-    /** Запрос чтения — порт `Ble2025DeviceUtils.b()`. */
+    /** Запрос чтения. */
     fun encodeRead(cmd: Int): ByteArray = encode(Frame.TYPE_READ, cmd, ByteArray(0))
 
-    /** Команда записи — порт `Ble2025DeviceUtils.c()`. */
+    /** Команда записи. */
     fun encodeWrite(cmd: Int, payload: ByteArray = ByteArray(0)): ByteArray =
         encode(Frame.TYPE_WRITE, cmd, payload)
 
@@ -50,7 +50,7 @@ object FrameCodec {
     }
 
     /**
-     * Выделяет все кадры из одного уведомления. Порт цикла из `BleService$15.onCharacteristicChanged`:
+     * Выделяет все кадры из одного уведомления:
      * ищем `A5 5A`, читаем длину, отбрасываем кадры с невалидной длиной, на обрезанном кадре — стоп.
      * CRC не проверяется строго: оригинал только логирует несовпадение.
      */

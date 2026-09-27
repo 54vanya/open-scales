@@ -83,7 +83,7 @@ class ScaleRepositoryTest {
         runCurrent()
         assertTrue(env.repository.state.value.reconnecting)
 
-        // Пауза отсчитывается от конца неудачной попытки (fixed delay, как ReconnectTask оригинала).
+        // Пауза отсчитывается от конца неудачной попытки (fixed delay, как в официальном приложении).
         val step = ScaleRepository.RECONNECT_INTERVAL_MS + FakeBleTransport.CONNECT_LATENCY_MS + 100
         advanceTimeBy(step)
         assertEquals(2, env.transports.size)

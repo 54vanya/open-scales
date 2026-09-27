@@ -32,7 +32,7 @@ enum class TimerState(val code: Int) {
     }
 }
 
-/** Коды legacy-команд TES08 (`Commands$Scales` оригинала). */
+/** Коды legacy-команд TES08. */
 object LegacyCmd {
     const val TARE = 0x00
     const val START_TIMER = 0x08

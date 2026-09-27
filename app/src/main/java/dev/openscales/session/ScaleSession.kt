@@ -40,7 +40,6 @@ import kotlin.coroutines.CoroutineContext
 
 /**
  * Одна попытка подключения к весам и работа с ними до разрыва.
- * Последовательность и тайминги — из `BleService` оригинала (см. design.md).
  */
 class ScaleSession(
     private val transport: BleTransport,
@@ -187,7 +186,7 @@ class ScaleSession(
     }
 
     private suspend fun handshake() {
-        // Порт BleService.U(): обязательны батарея и (если модель неизвестна) модель.
+        // Обязательны батарея и (если модель неизвестна) модель.
         try {
             queue.read(Cmd.BATTERY)
         } catch (e: CommandException) {
@@ -380,7 +379,7 @@ class ScaleSession(
         transport.write(GattIds.SERVICE_LEGACY, GattIds.COMMAND_LEGACY, bytes)
     }
 
-    /** Чтение параметров для экрана настроек (порт `DeviceDetailsActivity.C()`). */
+    /** Чтение параметров для экрана настроек. */
     suspend fun loadSettings() {
         requireReady()
         if (legacy) return
@@ -445,7 +444,7 @@ class ScaleSession(
 
     suspend fun factoryReset() = deviceCommand(Cmd.FACTORY_RESET)
 
-    /** Команда 0x1A перед удалением bond (порт `BleService.G()`). */
+    /** Команда 0x1A перед удалением bond. */
     suspend fun forgetOnDevice() {
         if (!_state.value.isReady || legacy) return
         deviceCommand(Cmd.FORGET_DEVICE)
@@ -462,7 +461,7 @@ class ScaleSession(
         }
     }
 
-    /** Ручное отключение: 0x1C, затем закрытие GATT через 1.5 с (порт `BleService.o()`). */
+    /** Ручное отключение: 0x1C, затем закрытие GATT через 1.5 с. */
     suspend fun disconnect() {
         pendingEndReason = EndReason.USER
         if (_state.value.isReady && !legacy) {

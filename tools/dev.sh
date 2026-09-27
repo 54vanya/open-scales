@@ -1,12 +1,11 @@
 #!/usr/bin/env bash
-# Харнес разработки Open Scales: сборка, установка, логи BLE, скриншоты, декомпиляция исходного APK.
+# Харнес разработки Open Scales: сборка, установка, логи BLE, скриншоты, виртуальные весы.
 # Использование: tools/dev.sh <команда> [аргументы]. Без аргументов — список команд.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 export JAVA_HOME="${JAVA_HOME:-/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home}"
 export ANDROID_HOME="${ANDROID_HOME:-/opt/homebrew/share/android-commandlinetools}"
-APK_SOURCE="$ROOT/blackmirror_2.5.0_build125_release_20260910.apk"
 OUT="${OUT:-$ROOT/build/dev}"
 # Без вотчера файлов: на этой машине он зависает в NativeFileWatcher.startWatching0, и сборка висит бесконечно.
 GRADLE=("$ROOT/gradlew" -p "$ROOT" --no-watch-fs)
@@ -55,8 +54,5 @@ case "$cmd" in
   emu-narrow) adb -s emulator-5554 shell wm density "${1:-540}" ;;               # 540 → ширина 320 dp; reset — сброс
   emu-kill)  adb -s emulator-5554 emu kill ;;
   digits-font) "$ROOT/tools/make-digits-font.sh" ;;                            # перегенерировать шрифт цифр показаний
-  decompile) # Исходники оригинального APK для сверки протокола (jadx: brew install jadx).
-             jadx -d "$OUT/blackmirror-src" --no-res -j 8 "$APK_SOURCE" >/dev/null 2>&1 || true
-             echo "$OUT/blackmirror-src/sources/com/timemore/blackmirror (ble/BleService.java, ble/c.java, ui/device/)" ;;
   help|*)    sed -n 's/^  \([a-z-]*\))[^#]*\(#.*\)\{0,1\}$/  \1 \2/p' "$0" ;;
 esac

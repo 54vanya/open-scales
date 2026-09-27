@@ -81,7 +81,7 @@ sealed interface ScaleMessage {
     }
 }
 
-/** Порт разборщика `Scale2025DataParser` из `BleService$15`. */
+/** Разбор кадров протокола 2025 в [ScaleMessage]. */
 object MessageDecoder {
 
     /** Никогда не возвращает null: некорректный payload превращается в [ScaleMessage.Raw]. */

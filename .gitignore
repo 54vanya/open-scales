@@ -8,6 +8,7 @@ local.properties
 .kotlin/
 *.apk
 
-# Справка по протоколу и прошивке со ссылками на декомпилированный APK — только локально.
+# Справка по протоколу и прошивке и декомпиляция APK — только локально.
 docs/protocol.md
 docs/firmware.md
+tools/decompile.sh

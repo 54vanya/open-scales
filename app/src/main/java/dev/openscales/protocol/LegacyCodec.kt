@@ -1,6 +1,6 @@
 package dev.openscales.protocol
 
-/** Протокол старых двойных весов TES08 (`r.java` case 0 и `command/b.java` оригинала). */
+/** Протокол старых двойных весов TES08. */
 object LegacyCodec {
 
     data class LegacyWeight(val totalGrams: Float, val isDouble: Boolean, val lowerGrams: Float)

@@ -26,7 +26,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Единственная точка работы с весами в приложении: держит текущую [ScaleSession],
- * запоминает последние весы и переподключается к ним (порт `BleService.V()/ReconnectTask`).
+ * запоминает последние весы и переподключается к ним.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class ScaleRepository(
@@ -181,7 +181,7 @@ class ScaleRepository(
         }
     }
 
-    /** Порт `BleService.u()/G()`: 0x1A, отключение, удаление bond и запомненного устройства. */
+    /** Забыть весы: 0x1A, отключение, удаление bond и запомненного устройства. */
     suspend fun forget() {
         val address = state.value.address ?: savedDevice.value?.address
         session.value?.let { s ->

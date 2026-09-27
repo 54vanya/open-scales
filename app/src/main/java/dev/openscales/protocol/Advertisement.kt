@@ -2,7 +2,7 @@ package dev.openscales.protocol
 
 import java.util.UUID
 
-/** Разбор рекламы весов — порт `bumptech.glide.e.w()` и фильтра `DeviceScanActivity`. */
+/** Разбор рекламы весов: модель по имени и данным производителя, фильтр своих устройств. */
 object Advertisement {
 
     data class Identity(val model: ScaleModel, val protocolVersion: Int?)

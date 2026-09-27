@@ -1,6 +1,6 @@
 package dev.openscales.protocol
 
-/** CRC-16/Modbus: init 0xFFFF, reflected poly 0xA001. Порт `Ble2025DeviceUtils.d()`. */
+/** CRC-16/Modbus: init 0xFFFF, reflected poly 0xA001. */
 object Crc16 {
     fun modbus(data: ByteArray, length: Int = data.size): Int {
         var crc = 0xFFFF

@@ -21,7 +21,7 @@ export JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home
 
 `tools/dev.sh` — харнес для устройства: `install [debug|release]`, `start`, `grant`, `stayon`, `shot <name>`,
 `tap x y`, `find "<text>"` (bounds через uiautomator), `ble` (фильтрованный logcat TX/RX), `scan-log`,
-`emu` / `emu-narrow` / `emu-kill` (AVD `openscales_phone`, API 36), `decompile` (jadx исходного APK).
+`emu` / `emu-narrow` / `emu-kill` (AVD `openscales_phone`, API 36).
 `sim <команда>` — виртуальные весы (см. ниже). Без аргументов печатает список. Устройство выбирается по
 `$ANDROID_SERIAL`, иначе первый телефон — а без телефона это может оказаться TV в adb, поэтому на эмуляторе
 `export ANDROID_SERIAL=emulator-5554`.
@@ -61,7 +61,7 @@ ui/        Activity на каждый экран: MainActivity (вкладки �
 
 ## Протокол и проверка на железе
 
-Справка с байтами, таймингами и местами в декомпилированном APK — `docs/protocol.md` (и `docs/firmware.md`): только локально, в `.gitignore`, в git не входят. Главное, что видно только
+Справка с байтами и таймингами — `docs/protocol.md` (и `docs/firmware.md`), декомпиляция APK — `tools/decompile.sh`: только локально, в `.gitignore`, в git не входят. Главное, что видно только
 на реальных весах: CRC в кадрах от весов нулевой (строго не проверять), вес приходит сам кадрами `type=0x01`,
 процент батареи во втором байте ответа `0x05`.
 

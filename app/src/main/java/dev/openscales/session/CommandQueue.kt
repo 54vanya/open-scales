@@ -15,7 +15,7 @@ class CommandException(val kind: Kind, message: String) : Exception(message) {
 }
 
 /**
- * Порт `BleCommandQueue` оригинала: одна команда в полёте, ответ ищется по `(type, cmd)`,
+ * Очередь команд: одна команда в полёте, ответ ищется по `(type, cmd)`,
  * таймаут ответа [responseTimeoutMs], повторы — 1 для чтений, 0 для записей.
  *
  * Коалесинг:
