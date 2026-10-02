@@ -9,6 +9,15 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.foundation.Canvas
+import kotlinx.coroutines.delay
+import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -17,10 +26,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -175,12 +184,24 @@ fun BeansScreen(
             }
             // Цели и вода — от насыпанного, а пока на весах пусто или весов нет — от дозы рецепта.
             val base = ui.previewDoseG(recipe.defaultDoseG.toDouble())
+            // Рецепт как есть — от весов не зависит; ниже, если на весах уже есть зерно, — пересчёт на него.
+            val defaultDose = recipe.defaultDoseG.toDouble()
+            // Одна строка, чтобы экран не дёргался: пока на весах есть зерно — пересчёт на него, иначе рецепт как есть.
+            // Доза рецепта и вода от насыпанного в одной строке не смешиваются.
             Text(
-                stringResource(
-                    R.string.brew_dose_water,
-                    stepWeightWithUnit(recipe.defaultDoseG.toDouble(), unit),
-                    stepWeightWithUnit(recipe.totalWaterG(base), unit),
-                ),
+                if (ui.weightG != null && ui.weightG >= BrewUi.MIN_DOSE_G) {
+                    stringResource(
+                        R.string.brew_scaled_water,
+                        stepWeightWithUnit(ui.weightG, unit),
+                        stepWeightWithUnit(recipe.totalWaterG(ui.weightG), unit),
+                    )
+                } else {
+                    stringResource(
+                        R.string.brew_dose_water,
+                        stepWeightWithUnit(defaultDose, unit),
+                        stepWeightWithUnit(recipe.totalWaterG(defaultDose), unit),
+                    )
+                },
                 style = MaterialTheme.typography.titleMedium,
             )
             recipe.description?.let {
@@ -238,6 +259,19 @@ private fun RecipePreview(recipe: Recipe, baseG: Double, unit: WeightUnit) {
 }
 
 private val PREVIEW_TIME_WIDTH = 44.dp
+
+/** Полоса налива внизу табло. */
+private val POUR_BAR_HEIGHT = 24.dp
+
+/** Отметка идеального уровня: узкая и чуть выше полосы, чтобы читалась и поверх заполнения. */
+private val POUR_MARK_WIDTH = 4.dp
+private val POUR_MARK_OVERHANG = 3.dp
+
+/** Как часто обновлять идеальный уровень на полосе налива. */
+private const val PACE_TICK_MS = 100L
+
+/** Кнопка «Тара» на табло — крупная, как число, чтобы попасть, не глядя. */
+private val TARE_BUTTON_HEIGHT = 96.dp
 private val PREVIEW_TIME_GAP = 8.dp
 
 /**
@@ -256,6 +290,10 @@ fun StepsScreen(
     onStart: () -> Unit,
     onPause: () -> Unit,
     onStop: () -> Unit,
+    /** «Тара» на шаге «Тара» — с табло и из ряда кнопок. */
+    onTarePart: () -> Unit = {},
+    /** Время варки в миллисекундах для идеального уровня на полосе; `null` — считать по целым секундам. */
+    elapsedMs: () -> Long? = { null },
     triggerOnPress: Boolean = true,
     slashedZero: Boolean = true,
     /** Только debug: время варки действительно отрисовано (проба «замерло и догнало»). */
@@ -267,12 +305,9 @@ fun StepsScreen(
     val dose = ui.doseG ?: recipe.defaultDoseG.toDouble()
     val seconds = ui.timelineSeconds
     val current = timeline.stepAt(seconds)
-    // Распределение — по текущему весу, а без связи — по последнему полученному. До «Старт» весы ещё не
-    // оттарированы (на них воронка с зерном) — налитым считается ноль, шаги показывают полные цели.
-    val poured = if (ui.phase == BrewPhase.READY) 0.0 else ui.weightG ?: ui.lastWeightG
-    val water = PourDistribution.values(recipe.targetsG(dose), poured, mode)
-    val waterIndex = recipe.items.runningFold(-1) { n, item -> if ((item as? RecipeItem.Step)?.targetG != null) n + 1 else n }
-        .drop(1)
+    // Распределение — по текущему весу, а без связи — по последнему полученному, у каждой части рецепта — от своей
+    // тары. До «Старт» весы ещё не оттарированы (на них воронка с зерном) — налитым считается ноль.
+    val water = PourDistribution.values(recipe, dose, ui::pouredIn, mode)
     val listState = rememberLazyListState()
     val descriptionItems = if (recipe.description != null) 1 else 0
     LaunchedEffect(current) {
@@ -281,7 +316,7 @@ fun StepsScreen(
         if (current != null) listState.animateScrollToItem(current + descriptionItems)
     }
     val board = @Composable { modifier: Modifier ->
-        PourBoard(recipe, timeline, ui, dose, mode, slashedZero, modifier)
+        PourBoard(recipe, timeline, ui, dose, mode, slashedZero, triggerOnPress, onTarePart, elapsedMs, modifier)
     }
 
     Scaffold(
@@ -294,7 +329,7 @@ fun StepsScreen(
                 onSwap = onSwap,
             )
         },
-        bottomBar = { StepsControls(ui, triggerOnPress, onTare, onStart, onPause, onStop, onTimeDrawn) },
+        bottomBar = { StepsControls(ui, triggerOnPress, onTare, onStart, onPause, onStop, onTarePart, onTimeDrawn) },
     ) { padding ->
         val list = @Composable { modifier: Modifier ->
             LazyColumn(
@@ -324,9 +359,10 @@ fun StepsScreen(
                             note = item.note?.resolve(),
                             range = formatTime(timeline.startOf(index)) + "–" + formatTime(timeline.endOf(index)),
                             remaining = if (index == current && seconds != null) timeline.remainingIn(index, seconds) else null,
-                            water = item.targetG?.let { water[waterIndex[index]] },
+                            water = water[index],
                             unit = unit,
                             modifier = faded,
+                            isTare = item.tare,
                         )
                         is RecipeItem.Hint -> HintRow(item.text.resolve(), faded)
                     }
@@ -359,6 +395,7 @@ fun StepsScreen(
 /**
  * Табло пролива: текущий по времени шаг и остаток времени в нём; крупно, шрифтом показаний, — значение шага воды
  * (цвет: лей / хватит / перелив); мелко — цель, общий вес и поток. Без связи — по последнему полученному весу.
+ * Отсчёт шага без воды и итог варки — только когда вода шага воды улеглась ([BrewUi.holdWater]), до того — вода.
  */
 @Composable
 private fun PourBoard(
@@ -368,20 +405,24 @@ private fun PourBoard(
     doseG: Double,
     mode: StepWeightMode,
     slashedZero: Boolean,
+    triggerOnPress: Boolean,
+    onTarePart: () -> Unit,
+    elapsedMs: () -> Long?,
     modifier: Modifier = Modifier,
 ) {
     val unit = ui.scale.unit
     val seconds = ui.timelineSeconds
     val current = timeline.stepAt(seconds)
     val weightG = ui.weightG ?: ui.lastWeightG
-    val focus = PourFocus.of(timeline, doseG, weightG, seconds)
+    val focus = PourFocus.of(timeline, doseG, weightG, seconds, ui.tare)
     val firstStep = recipe.items.indexOfFirst { it is RecipeItem.Step }
     // Шаг, у которого крупно время до конца, а не вода: текущий по времени, а в ожидании пролива — первый.
+    // Пока вода не улеглась (ещё льётся или недолита), крупно остаётся вода, а остаток шага — в углу.
     val timeStep = when {
         current != null && seconds != null -> current
         ui.phase == BrewPhase.ARMED -> firstStep
         else -> null
-    }?.takeIf { (recipe.items[it] as RecipeItem.Step).showTime }
+    }?.takeIf { (recipe.items[it] as RecipeItem.Step).showTime && !ui.holdWater }
     // До пролива — первый шаг целиком, после конца времени — «Готово» и общая длительность.
     val (stepTitle, stepTime) = when {
         current != null && seconds != null ->
@@ -438,8 +479,8 @@ private fun PourBoard(
                         color = if (corner != null) corner.state.color() else colors.onSurface,
                     )
                 }
-                if (ui.phase == BrewPhase.FINISHED) {
-                    // Время рецепта вышло: итог варки — вес на весах сейчас и общее время.
+                if (ui.phase == BrewPhase.FINISHED && !ui.holdWater) {
+                    // Время рецепта вышло и вода улеглась: итог варки — вес на весах сейчас и общее время.
                     BigReading(
                         text = formatReadingWeight(weightG, unit),
                         unitSymbol = stringResource(unit.symbolRes()),
@@ -448,6 +489,20 @@ private fun PourBoard(
                     )
                     BoardCaption(stringResource(R.string.brew_on_scale))
                     BoardCaption(stringResource(R.string.brew_total_time, formatTime(ui.seconds)))
+                } else if (ui.awaitingTare) {
+                    // Часть ждёт тары: вместо воды — крупная кнопка. Весы тарирует только нажатие.
+                    val part = timeline.partAt(seconds)
+                    val tareStep = recipe.items.indices.first { recipe.partOf[it] == part && (recipe.items[it] as? RecipeItem.Step)?.tare == true }
+                    val press = rememberPressAction(ui.canTarePart && triggerOnPress, onTarePart)
+                    FilledTonalButton(
+                        onClick = press.onClick,
+                        enabled = ui.canTarePart,
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp).heightIn(min = TARE_BUTTON_HEIGHT).then(press.modifier),
+                    ) {
+                        Text(stringResource(R.string.tare), style = MaterialTheme.typography.displaySmall)
+                    }
+                    (recipe.items[tareStep] as RecipeItem.Step).note?.let { BoardCaption(it.resolve()) }
+                    BoardCaption(totalAndFlow(ui, weightG))
                 } else if (timeStep != null) {
                     val left = if (seconds != null) timeline.remainingIn(timeStep, seconds) else timeline.endOf(timeStep) - timeline.startOf(timeStep)
                     BigReading(
@@ -482,8 +537,67 @@ private fun PourBoard(
                     BoardCaption(if (focus.itemIndex != current) "$waterStep · $target" else target)
                     BoardCaption(totalAndFlow(ui, weightG))
                 }
+                // Полоса налива — только когда табло показывает воду; в остальных видах её место занято,
+                // чтобы табло не меняло высоту при смене шага. Без анимации: сразу текущий вес.
+                val bar = focus.takeIf { (ui.phase != BrewPhase.FINISHED || ui.holdWater) && !ui.awaitingTare && timeStep == null }
+                // Идеальный уровень — раз в 0,1 с по точному времени, пока идёт пролив; читается только полосой,
+                // поэтому табло не перекомпонуется десять раз в секунду.
+                val running = bar != null && ui.phase == BrewPhase.RUNNING
+                val preciseSeconds = remember { mutableDoubleStateOf(seconds?.toDouble() ?: 0.0) }
+                LaunchedEffect(running) {
+                    while (running) {
+                        elapsedMs()?.let { preciseSeconds.doubleValue = it / 1_000.0 }
+                        delay(PACE_TICK_MS)
+                    }
+                }
+                PourBar(
+                    fraction = bar?.fraction ?: 0f,
+                    pace = {
+                        val at = if (running && elapsedMs() != null) preciseSeconds.doubleValue else seconds?.toDouble()
+                        bar?.paceFraction(timeline, at) ?: 0f
+                    },
+                    over = bar?.state == TargetState.OVER,
+                    modifier = Modifier.alpha(if (bar != null) 1f else 0f),
+                )
             }
         }
+    }
+}
+
+/**
+ * Полоса налива: налитое в шаг воды ([fraction]) и поверх — отметка идеального уровня ([pace] — сколько было бы
+ * налито к этой секунде при ровном проливе). Отстаёшь — край налитого не дошёл до отметки; опережаешь — налитое ушло
+ * за неё. Без анимации: значения показываются сразу.
+ */
+@Composable
+private fun PourBar(fraction: Float, pace: () -> Float, over: Boolean, modifier: Modifier = Modifier) {
+    val colors = MaterialTheme.colorScheme
+    val track = colors.outlineVariant
+    val fill = if (over) colors.error else colors.primary
+    val markColor = colors.onSurface
+    // Одна полоса, скруглённая только снаружи: дорожка и налитое режутся по общему контуру, поэтому граница налитого
+    // прямая, без выемки (у системного индикатора скруглённые концы оставляли разрыв).
+    // Идеальный уровень читается в фазе рисования — десять обновлений в секунду не перекомпонуют табло.
+    Canvas(modifier.fillMaxWidth().padding(top = 10.dp).height(POUR_BAR_HEIGHT + POUR_MARK_OVERHANG * 2)) {
+        val barHeight = POUR_BAR_HEIGHT.toPx()
+        val top = (size.height - barHeight) / 2
+        val radius = CornerRadius(barHeight / 2)
+        val outline = Path().apply {
+            addRoundRect(RoundRect(0f, top, size.width, top + barHeight, radius))
+        }
+        val paceX = size.width * pace()
+        clipPath(outline) {
+            drawRect(track, topLeft = Offset(0f, top), size = Size(size.width, barHeight))
+            drawRect(fill, topLeft = Offset(0f, top), size = Size(size.width * fraction, barHeight))
+        }
+        val markWidth = POUR_MARK_WIDTH.toPx()
+        val markX = (paceX - markWidth / 2).coerceIn(0f, size.width - markWidth)
+        drawRoundRect(
+            markColor,
+            topLeft = Offset(markX, 0f),
+            size = Size(markWidth, size.height),
+            cornerRadius = CornerRadius(markWidth / 2),
+        )
     }
 }
 
@@ -602,8 +716,10 @@ private fun StepsControls(
     onStart: () -> Unit,
     onPause: () -> Unit,
     onStop: () -> Unit,
+    onTarePart: () -> Unit,
     onTimeDrawn: ((Int) -> Unit)? = null,
 ) {
+    val tarePart = rememberPressAction(ui.canTarePart && triggerOnPress, onTarePart)
     val tareEnabled = ui.scale.isReady && ui.phase == BrewPhase.READY
     val startEnabled = ui.phase == BrewPhase.ARMED || ui.phase == BrewPhase.READY && ui.weightG != null
     val pauseEnabled = ui.phase == BrewPhase.RUNNING || ui.phase == BrewPhase.PAUSED
@@ -638,6 +754,14 @@ private fun StepsControls(
                     modifier = height.weight(1.3f).then(start.modifier),
                 ) { label(stringResource(if (ui.phase == BrewPhase.ARMED) R.string.brew_waiting else R.string.start)) }
             } else {
+                if (ui.awaitingTare) {
+                    // То же, что кнопка на табло: пока часть рецепта ждёт тары.
+                    FilledTonalButton(
+                        onClick = tarePart.onClick,
+                        enabled = ui.canTarePart,
+                        modifier = height.weight(1f).then(tarePart.modifier),
+                    ) { label(stringResource(R.string.tare)) }
+                }
                 Button(
                     onClick = pause.onClick,
                     enabled = pauseEnabled,

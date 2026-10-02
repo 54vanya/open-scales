@@ -15,7 +15,7 @@ class RecipeFormatTest {
         items = listOf(
             RecipeItem.Step(Text.Plain("Цветение"), 12, Text.Plain("Лейте медленно"), 30),
             RecipeItem.Hint(Text.Plain("Всё цветение — 45 секунд")),
-            RecipeItem.Step(Text.Plain("Подождите"), 33, showTime = true),
+            RecipeItem.Step(Text.Plain("Подождите"), 33),
             RecipeItem.Step(Text.Plain("Налейте"), 30, targetG = 250),
         ),
         category = RecipeCategory.AEROPRESS,
@@ -44,9 +44,8 @@ class RecipeFormatTest {
         assertTrue(text, text.contains("\"targetG\": 250"))
         assertTrue(text, text.contains("\"type\": \"hint\""))
         assertTrue(text, !text.contains("15.0"))
-        // Признак времени пишется только там, где включён.
-        assertEquals(1, Regex("showTime").findAll(text).count())
-        assertTrue(text, text.contains("\"showTime\": true"))
+        // Признак времени выводится из воды и не пишется.
+        assertTrue(text, !text.contains("showTime"))
         assertTrue(text, text.contains("\"difficulty\": \"hard\""))
     }
 
@@ -70,11 +69,45 @@ class RecipeFormatTest {
     }
 
     @Test
+    fun `old time flag is ignored, steps without water count down`() {
+        val decoded = RecipeFormat.decode(
+            """
+            { "format": 1, "id": "old", "title": "T", "category": "v60", "doseG": 15,
+              "items": [ { "type": "step", "title": "Налейте", "durationS": 10, "targetG": 30, "showTime": true },
+                         { "type": "step", "title": "Подождите", "durationS": 20 } ] }
+            """,
+        )!!
+        assertEquals(listOf(false, true), decoded.items.map { (it as RecipeItem.Step).showTime })
+    }
+
+    private val withTare = recipe.copy(
+        items = recipe.items + listOf(
+            RecipeItem.Step(Text.Plain("Тара"), 10, Text.Plain("Снимите аэропресс"), tare = true),
+            RecipeItem.Step(Text.Plain("Разбавьте"), 15, targetG = 100),
+        ),
+    )
+
+    @Test
+    fun `tare step round trip is format 2`() {
+        val text = RecipeFormat.encode(withTare)
+        assertTrue(text, text.contains("\"format\": 2"))
+        assertEquals(1, Regex("\"tare\": true").findAll(text).count())
+        assertEquals(withTare, RecipeFormat.decode(text))
+    }
+
+    @Test
+    fun `without tare stays format 1 without the field`() {
+        val text = RecipeFormat.encode(recipe)
+        assertTrue(text, text.contains("\"format\": 1"))
+        assertTrue(text, !text.contains("tare"))
+    }
+
+    @Test
     fun `broken or newer documents are rejected quietly`() {
         assertNull(RecipeFormat.decode(""))
         assertNull(RecipeFormat.decode("{ not json"))
         assertNull(RecipeFormat.decode("""{ "format": 1, "id": "a" }"""))
-        assertNull(RecipeFormat.decode(RecipeFormat.encode(recipe).replace("\"format\": 1", "\"format\": 2")))
+        assertNull(RecipeFormat.decode(RecipeFormat.encode(recipe).replace("\"format\": 1", "\"format\": 3")))
         // Правильный JSON, но неверный рецепт: нулевая длительность, убывающие рубежи.
         assertNull(RecipeFormat.decode(RecipeFormat.encode(recipe).replace("\"durationS\": 33", "\"durationS\": 0")))
         assertNull(RecipeFormat.decode(RecipeFormat.encode(recipe).replace("\"targetG\": 250", "\"targetG\": 20")))

@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Scale
 import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -48,6 +49,10 @@ fun StepCard(
     onClick: (() -> Unit)? = null,
     /** У шага стоит «крупно — время до конца шага»: в редакторе рядом со временем иконка таймера. */
     showsTime: Boolean = false,
+    /** Прибавка к рубежу выше («+60 г») мелко под рубежом — только в редакторе. */
+    targetIncrement: String? = null,
+    /** Шаг «Тара»: справа иконка весов вместо воды. */
+    isTare: Boolean = false,
 ) {
     val active = remaining != null
     // Выделение переходит с шага на шаг плавно.
@@ -86,7 +91,13 @@ fun StepCard(
                     }
                 }
             }
-            if (water != null) {
+            if (isTare) {
+                Icon(
+                    Icons.Rounded.Scale,
+                    contentDescription = stringResource(R.string.tare),
+                    modifier = Modifier.size(32.dp),
+                )
+            } else if (water != null) {
                 // Крупно — значение режима, мелко под ним — цель шага с подписью, что значит крупное число.
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
@@ -108,7 +119,12 @@ fun StepCard(
                     )
                 }
             } else if (target != null) {
-                Text(target, style = MaterialTheme.typography.headlineSmall)
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(target, style = MaterialTheme.typography.headlineSmall)
+                    targetIncrement?.let {
+                        Text(it, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
             }
         }
     }

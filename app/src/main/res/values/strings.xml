@@ -6,8 +6,8 @@
     <string name="phase_disconnected">Not connected</string>
     <string name="phase_connecting">Connecting…</string>
     <string name="phase_bonding">Pairing…</string>
-    <string name="phase_subscribing">Setting up data…</string>
-    <string name="phase_handshaking">Reading settings…</string>
+    <string name="phase_subscribing">Connecting…</string>
+    <string name="phase_handshaking">Connecting…</string>
     <string name="phase_ready">Connected</string>
     <string name="phase_disconnecting">Disconnecting…</string>
     <string name="phase_failed">Connection failed</string>
@@ -55,13 +55,13 @@
     <!-- Settings -->
     <string name="settings_title_app">Settings</string>
     <string name="section_app">App</string>
-    <string name="setting_app_keep_screen_on">Keep main screen awake</string>
+    <string name="setting_app_keep_screen_on">Keep the screen on with the scale open</string>
     <string name="setting_app_slashed_zero">Slashed zero</string>
-    <string name="setting_app_trigger">Buttons act on</string>
+    <string name="setting_app_trigger">Buttons react</string>
     <string name="trigger_on_press">Press</string>
     <string name="trigger_on_release">Release</string>
-    <string name="setting_app_sync_timer">Sync timer with scale</string>
-    <string name="setting_app_sync_timer_hint">Show the scale\'s time instead of the app\'s stopwatch</string>
+    <string name="setting_app_sync_timer">Timer from the scale</string>
+    <string name="setting_app_sync_timer_hint">Show the time from the scale\'s display, not the app</string>
     <string name="setting_app_beep">Button sound in the app</string>
     <string name="setting_app_beep_note">Beep note</string>
     <string name="note_c">C</string>
@@ -100,16 +100,17 @@
     <string name="action_disconnect">Disconnect</string>
     <string name="action_power_off">Turn off scale</string>
     <string name="action_factory_reset">Factory reset</string>
-    <string name="action_forget">Forget device</string>
+    <string name="action_forget">Forget scale</string>
     <string name="factory_reset_confirm">All scale settings will return to factory defaults. The scale will disconnect.</string>
-    <string name="forget_confirm">The scale will be disconnected and unpaired. To use it again, find it again.</string>
-    <string name="confirm">Confirm</string>
+    <string name="forget_confirm">The scale will disconnect and leave the list. To bring it back, find it again.</string>
+    <string name="confirm_factory_reset">Reset</string>
+    <string name="confirm_forget">Forget</string>
     <string name="cancel">Cancel</string>
     <string name="save">Save</string>
     <string name="rename_title">Scale name</string>
     <plurals name="rename_limit">
-        <item quantity="one">Up to %1$d byte (about %1$d Latin character)</item>
-        <item quantity="other">Up to %1$d bytes (about %1$d Latin characters)</item>
+        <item quantity="one">Up to %1$d Latin letter — Cyrillic takes twice the space</item>
+        <item quantity="other">Up to %1$d Latin letters — Cyrillic takes twice the space</item>
     </plurals>
 
     <!-- Units -->
@@ -131,17 +132,17 @@
     <string name="theme_dark">Dark</string>
 
     <!-- Colors -->
-    <string name="setting_app_own_colors">Use app colors</string>
-    <string name="setting_app_own_colors_hint">Otherwise colors come from your wallpaper</string>
+    <string name="setting_app_own_colors">App colors</string>
+    <string name="setting_app_own_colors_hint">Turn off to match your wallpaper</string>
 
     <!-- Connection errors -->
     <string name="error_not_timemore">This device doesn\'t look like a Timemore scale</string>
     <string name="error_pairing_not_started">Pairing didn\'t start</string>
     <string name="error_pairing_rejected">Pairing was rejected</string>
     <string name="error_pairing_timeout">Pairing didn\'t finish</string>
-    <string name="error_no_model">The scale didn\'t report its model</string>
+    <string name="error_no_model">Couldn\'t tell which scale this is</string>
     <string name="error_link_lost">Connection lost</string>
-    <string name="error_dropped_while_connecting">Connection dropped while connecting</string>
+    <string name="error_dropped_while_connecting">Lost the connection while connecting</string>
     <string name="error_connect_failed">Couldn\'t connect</string>
 
     <!-- Command and scan errors -->
@@ -149,7 +150,7 @@
     <string name="error_command_rejected">The scale rejected the command</string>
     <string name="error_command_transport">No connection to the scale</string>
     <string name="error_not_connected">The scale isn\'t connected</string>
-    <string name="error_command_failed">Couldn\'t complete the command</string>
+    <string name="error_command_failed">The scale didn\'t do that</string>
     <string name="error_bluetooth_off">Bluetooth is off</string>
     <string name="error_scan_failed">Couldn\'t start searching</string>
 
@@ -162,15 +163,16 @@
 
     <!-- Brewing -->
     <string name="brew_beans_title">Weigh the beans</string>
-    <string name="brew_dose_water">Recipe dose %1$s · Water %2$s</string>
+    <string name="brew_dose_water">Recipe: %1$s coffee to %2$s water</string>
+    <string name="brew_scaled_water">For %1$s coffee — %2$s water</string>
     <string name="brew_until">until %1$s</string>
     <string name="brew_next">Next</string>
     <string name="brew_dose">Dose %1$s</string>
-    <string name="brew_waiting">Pour to start</string>
+    <string name="brew_waiting">Pour when ready</string>
     <string name="brew_resume">Resume</string>
     <string name="brew_stop">Stop</string>
     <string name="brew_step_left">%1$s left</string>
-    <string name="brew_left_of">left of %1$s</string>
+    <string name="brew_left_of">left to %1$s</string>
     <string name="brew_poured_of">poured of %1$s</string>
     <string name="brew_total">total %1$s</string>
     <string name="brew_done">Done</string>
@@ -190,11 +192,11 @@
     <string name="brew_finish_text">The timer will stop at the current time.</string>
     <string name="brew_continue">Keep brewing</string>
     <string name="brew_finish">Finish</string>
-    <string name="setting_step_weight">Weight in recipe steps</string>
+    <string name="setting_step_weight">What steps show</string>
     <string name="setting_step_signals">Step signals</string>
-    <string name="setting_step_signals_hint">Beep on each new recipe step, twice when a step\'s target is reached</string>
-    <string name="step_weight_remaining">Left to pour</string>
-    <string name="step_weight_poured">Poured of target</string>
+    <string name="setting_step_signals_hint">A beep on each new step, two when you\'ve poured enough</string>
+    <string name="step_weight_remaining">How much is left</string>
+    <string name="step_weight_poured">How much is poured</string>
 
     <!-- Built-in recipe -->
     <string name="recipe_hoffmann_title">Hoffmann V60</string>
@@ -222,22 +224,23 @@
     <string name="recipe_step_flip">Flip</string>
     <string name="recipe_note_spiral_no_swirl">In a spiral, don\'t swirl</string>
     <string name="recipe_note_no_swirl">Another 45 g in a spiral, don\'t swirl</string>
-    <string name="recipe_note_energetic_center">In a spiral with energy, keep the stream near the center</string>
+    <string name="recipe_note_energetic_coin">With energy, small circles in the center</string>
     <string name="recipe_hint_drawdown_230">Drawdown should finish by 2:30</string>
     <string name="recipe_inverted_aeropress_title">Inverted AeroPress</string>
     <string name="recipe_inverted_aeropress_description">Inverted: plunger at the bottom. Medium-fine grind. Water 93 °C.</string>
-    <string name="recipe_note_stir_three_four">Stir 3–4 times to wet all the grounds</string>
+    <string name="recipe_note_stir_three_four">3–4 times to wet all the grounds</string>
     <string name="recipe_note_flip">Cap on, push the air out, flip onto the cup</string>
     <string name="recipe_note_press_gently">Gently, with the weight of your hands</string>
     <string name="recipe_kasuya_title">Tetsu Kasuya 4:6</string>
-    <string name="recipe_kasuya_description">Medium-coarse grind. Water 93 °C. Water is split 4:6: the first part sets sweetness and acidity, the second sets strength.</string>
+    <string name="recipe_kasuya_description">Coarse grind, like for a French press. Water 93 °C. Water is split 4:6: the first part sets sweetness and acidity, the second sets strength.</string>
     <string name="recipe_note_spiral_center">Spiral from the center out and back</string>
     <string name="recipe_hint_remove_dripper">At 3:30 remove the dripper</string>
     <string name="recipe_rao_title">Scott Rao V60</string>
     <string name="recipe_rao_description">Medium grind. Water just off the boil.</string>
-    <string name="recipe_note_spin_hard">Spin the dripper hard to wet all the grounds</string>
+    <string name="recipe_note_stir_spoon_gently">Gently stir with a spoon to wet all the grounds</string>
     <string name="recipe_note_circles">In circles, without stopping</string>
-    <string name="recipe_note_stir_walls">Stir along the walls, then give a gentle spin</string>
+    <string name="recipe_note_stir_one_circle">One gentle circle along the walls</string>
+    <string name="recipe_note_spin_level">2–3 turns to level the bed</string>
     <string name="recipe_hint_drawdown_330">Drawdown should finish by 3:00–3:30</string>
     <string name="recipe_hedrick_title">Lance Hedrick V60</string>
     <string name="recipe_hedrick_description">One and Done: two blooms and one pour. Medium-fine grind. Water 93 °C. Drawdown longer than 2:30 — grind coarser.</string>
@@ -260,7 +263,7 @@
     <string name="recipe_hoffmann_one_cup_title">Hoffmann’s 1-cup V60</string>
     <string name="recipe_hoffmann_one_cup_description">Five equal 50 g pours. Medium-fine grind, as fine as you can go without bitterness. Water: light roast — just off the boil, medium — 96 °C.</string>
     <string name="recipe_kasuya_switch_title">Tetsu Kasuya’s hybrid</string>
-    <string name="recipe_kasuya_switch_description">Hybrid: pour-over with the valve open, then immersion. Medium-fine grind. Water 90 °C, the third pour 70 °C. Drawdown past 3:00 — grind coarser.</string>
+    <string name="recipe_kasuya_switch_description">Hybrid: pour-over with the valve open, then immersion. Medium-fine grind. Water 93 °C, the third pour about 75 °C. Drawdown past 3:00 — grind coarser.</string>
     <string name="recipe_hoffmann_french_press_title">Hoffmann’s French press</string>
     <string name="recipe_hoffmann_french_press_description">A long steep with no pressing. Medium-coarse grind. Water just off the boil. Makes 2 cups.</string>
     <string name="recipe_wac2022_title">Jibbi Little (WAC 2022)</string>
@@ -271,8 +274,8 @@
     <string name="recipe_step_break_crust">Break the crust</string>
     <string name="recipe_step_skim">Skim</string>
     <string name="recipe_step_cap">Cap it</string>
-    <string name="recipe_note_valve_open">Valve open, water 90 °C</string>
-    <string name="recipe_note_valve_close_70">Close the valve, water 70 °C</string>
+    <string name="recipe_note_valve_open_93">Valve open, water 93 °C</string>
+    <string name="recipe_note_valve_close_75">Close the valve, water about 75 °C</string>
     <string name="recipe_note_all_at_once">All the water at once</string>
     <string name="recipe_note_break_crust">Stir the top layer with a spoon</string>
     <string name="recipe_note_skim">Lift off the foam and bits with two spoons</string>
@@ -285,14 +288,17 @@
     <string name="recipe_hint_drawdown_300">The drawdown should finish by 3:00</string>
     <string name="recipe_hint_plunge_to_surface">Lower the plunger just to the surface and pour slowly</string>
     <string name="recipe_hint_dilute_150">Dilute with hot water to 150 g</string>
-    <string name="recipe_hint_dilute_100">Dilute with hot water, about 100 g, to taste</string>
+    <string name="recipe_step_tare">Zero the scale</string>
+    <string name="recipe_step_dilute">Dilute</string>
+    <string name="recipe_note_remove_aeropress">Remove the AeroPress, the cup stays on the scale</string>
+    <string name="recipe_note_hot_water_to_taste">With hot water, to taste</string>
     <string name="recipe_group_french_press">French press</string>
     <string name="difficulty_easy">Easy</string>
     <string name="difficulty_medium">Medium</string>
     <string name="difficulty_hard">Hard</string>
 
     <string name="recipe_wbrc2024_title">Martin Wölfl (WBrC 2024)</string>
-    <string name="recipe_wbrc2024_description">2024 World Brewers Cup Champion (Austria). Four pours, done by 2:00. Medium grind. Water 93 °C. Competition brewer: flat-bottom Orea.</string>
+    <string name="recipe_wbrc2024_description">2024 World Brewers Cup Champion (Austria). Four pours — at 0:00, 0:40, 1:20 and 2:00, done by 2:20–2:25. Medium-fine grind. Water 93 °C. Competition brewer: flat-bottom Orea.</string>
     <string name="recipe_wbrc2022_title">Sherry Hsu (WBrC 2022)</string>
     <string name="recipe_wbrc2022_description">2022 World Brewers Cup Champion (Taiwan). Four 50 g pours every 30 seconds: the first with 70 °C water, the rest 95 °C. Medium-coarse grind. Competition brewer: flat-bottom Orea.</string>
     <string name="recipe_fukahori_switch_title">Emi Fukahori (WBrC 2018)</string>
@@ -302,7 +308,6 @@
     <string name="recipe_note_valve_closed">Valve closed</string>
     <string name="recipe_note_open_pour_center">Open the valve, pour into the centre without stopping</string>
     <string name="recipe_note_until_drained">Until it has all drained</string>
-    <string name="recipe_hint_drain">Wait until it has all drained</string>
 
     <!-- Own recipes and the recipe editor -->
     <string name="recipe_group_mine">My recipes</string>
@@ -316,32 +321,44 @@
     <string name="editor_title_new">New recipe</string>
     <string name="editor_title_edit">Edit recipe</string>
     <string name="editor_field_title">Name</string>
-    <string name="editor_field_dose">Default dose</string>
+    <string name="editor_field_dose">Coffee</string>
     <string name="editor_field_category">Brewer</string>
     <string name="editor_field_description">Description</string>
     <string name="editor_item_step">Step</string>
     <string name="editor_item_hint">Note</string>
-    <string name="editor_add">Add step or note</string>
+    <string name="editor_add">Add a step</string>
     <string name="editor_field_duration">Duration</string>
-    <string name="editor_duration_hint">Minutes and seconds, m:ss</string>
-    <string name="editor_field_target">Water milestone</string>
-    <string name="editor_target_hint">Total poured by the end of the step at the default dose; empty — no water</string>
-    <string name="editor_field_note">Comment</string>
-    <string name="editor_show_time">Large: time to the end of the step</string>
+    <string name="editor_duration_hint">For example, 1:30</string>
+    <string name="editor_field_target">Water by the end</string>
+    <string name="editor_target_hint">How much should be poured in total by the end of the step</string>
+    <string name="editor_field_note">How to do it</string>
+    <string name="editor_show_time">Countdown on the board</string>
     <string name="editor_field_hint_text">Text</string>
     <string name="editor_move_up">Move up</string>
     <string name="editor_move_down">Move down</string>
     <string name="editor_delete_item">Delete</string>
+    <string name="editor_template_pour">Pour</string>
+    <string name="editor_template_wait">Wait</string>
+    <string name="editor_template_action">Other action</string>
+    <string name="editor_kind_action">Action</string>
+    <string name="editor_error_empty_water">How much water by the end?</string>
+    <string name="editor_duplicate">Repeat</string>
+    <string name="editor_summary_water">%1$s water</string>
+    <string name="editor_increment" translatable="false">+%1$s</string>
     <string name="editor_cancel">Cancel</string>
     <string name="editor_save">Save</string>
-    <string name="editor_discard_title">Discard changes?</string>
-    <string name="editor_keep_editing">Keep editing</string>
-    <string name="editor_discard">Discard changes</string>
-    <string name="editor_error_empty">Fill in this field</string>
-    <string name="editor_error_grams">Whole grams only</string>
-    <string name="editor_error_duration">Enter m:ss, seconds up to 59</string>
-    <string name="editor_error_zero">Must be greater than zero</string>
-    <string name="editor_error_below_previous">Can’t be less than the milestone above (%1$s)</string>
+    <string name="editor_discard_title">Discard your changes?</string>
+    <string name="editor_keep_editing">Go back</string>
+    <string name="editor_discard">Discard</string>
+    <string name="editor_error_empty_title">Give it a name</string>
+    <string name="editor_error_empty_dose">How much coffee?</string>
+    <string name="editor_error_empty_step_title">What\'s this step called?</string>
+    <string name="editor_error_empty_duration">How long does it take?</string>
+    <string name="editor_error_empty_hint">Write the note</string>
+    <string name="editor_error_grams">Whole grams, no decimals</string>
+    <string name="editor_error_duration">Up to 59 seconds, like 1:30</string>
+    <string name="editor_error_zero">Can’t be zero</string>
+    <string name="editor_error_below_previous">Already %1$s above — at least that here</string>
     <string name="editor_error_no_steps">Add at least one step</string>
     <string name="editor_save_failed">Couldn’t save the recipe</string>
 

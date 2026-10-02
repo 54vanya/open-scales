@@ -26,6 +26,7 @@ import dev.openscales.OpenScalesApp
 import dev.openscales.R
 import dev.openscales.recipe.Difficulty
 import dev.openscales.recipe.DraftItem
+import dev.openscales.recipe.ItemTemplate
 import dev.openscales.recipe.Recipe
 import dev.openscales.recipe.RecipeCategory
 import dev.openscales.recipe.RecipeDraft
@@ -117,7 +118,10 @@ class RecipeEditorActivity : OpenScalesActivity() {
                         override fun setDifficulty(value: Difficulty) = viewModel.setDifficulty(value)
                         override fun setDescription(value: String) = viewModel.setDescription(value)
                         override fun updateItem(key: Long, change: (DraftItem) -> DraftItem) = viewModel.updateItem(key, change)
-                        override fun insert(index: Int, step: Boolean) = viewModel.insert(index, step)
+                        override fun insert(index: Int, template: ItemTemplate, title: String) =
+                            viewModel.insert(index, template, title)
+                        override fun duplicate(key: Long) = viewModel.duplicate(key)
+                        override fun focusConsumed() = viewModel.focusConsumed()
                         override fun move(key: Long, delta: Int) = viewModel.move(key, delta)
                         override fun remove(key: Long) = viewModel.remove(key)
                         override fun toggle(key: Long) = viewModel.toggle(key)

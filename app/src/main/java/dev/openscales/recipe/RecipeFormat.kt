@@ -10,7 +10,11 @@ import kotlinx.serialization.json.Json
  */
 object RecipeFormat {
 
-    const val VERSION = 1
+    /** Последняя версия, которую приложение читает. 2 — у шага может быть признак `tare` (рубежи по частям). */
+    const val VERSION = 2
+
+    /** Версия документа без шагов «Тара»: его читает и приложение до появления тары. */
+    private const val VERSION_WITHOUT_TARE = 1
 
     private val json = Json {
         prettyPrint = true
@@ -22,7 +26,8 @@ object RecipeFormat {
     fun encode(recipe: Recipe): String {
         require(recipe.id.startsWith(RecipeDraft.USER_ID_PREFIX)) { "only user recipes are stored" }
         val dto = RecipeDto(
-            format = VERSION,
+            // Старое приложение без тары прочло бы рубежи частей как один убывающий ряд — ему такой документ не отдаём.
+            format = if (recipe.items.any { (it as? RecipeItem.Step)?.tare == true }) VERSION else VERSION_WITHOUT_TARE,
             id = recipe.id.removePrefix(RecipeDraft.USER_ID_PREFIX),
             title = recipe.title.plain(),
             category = recipe.category.name.lowercase(),
@@ -31,7 +36,7 @@ object RecipeFormat {
             description = recipe.description?.plain(),
             items = recipe.items.map { item ->
                 when (item) {
-                    is RecipeItem.Step -> ItemDto.Step(item.title.plain(), item.durationS, item.targetG, item.note?.plain(), item.showTime)
+                    is RecipeItem.Step -> ItemDto.Step(item.title.plain(), item.durationS, item.targetG, item.note?.plain(), tare = item.tare)
                     is RecipeItem.Hint -> ItemDto.Hint(item.text.plain())
                 }
             },
@@ -54,7 +59,7 @@ object RecipeFormat {
                     when (item) {
                         is ItemDto.Step -> RecipeItem.Step(
                             Text.Plain(item.title), item.durationS, item.note?.let { Text.Plain(it) }, item.targetG,
-                            item.showTime,
+                            item.tare,
                         )
                         is ItemDto.Hint -> RecipeItem.Hint(Text.Plain(item.text))
                     }
@@ -94,8 +99,10 @@ object RecipeFormat {
             val durationS: Int,
             val targetG: Int? = null,
             val note: String? = null,
-            // Значение по умолчанию не пишется: поле появляется в документе, только когда признак включён.
+            // Признак прежних версий: отсчёт теперь выводится из того, есть ли у шага вода. Читается и игнорируется,
+            // не пишется.
             val showTime: Boolean = false,
+            val tare: Boolean = false,
         ) : ItemDto
 
         @Serializable

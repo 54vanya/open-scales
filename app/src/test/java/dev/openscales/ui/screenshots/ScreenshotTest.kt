@@ -2,6 +2,7 @@ package dev.openscales.ui.screenshots
 
 import android.app.Application
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -34,9 +35,19 @@ abstract class ScreenshotTest {
         compose.onRoot().captureRoboImage("$DIR/$name.png")
     }
 
-    /** Снимок всего экрана вместе с окнами поверх (диалоги) в `<name>.png`. */
-    protected fun screen(name: String, dark: Boolean = false, content: @Composable () -> Unit) {
+    /**
+     * Снимок всего экрана вместе с окнами поверх (диалоги, меню) в `<name>.png`. [act] — действия перед снимком
+     * (открыть меню).
+     */
+    protected fun screen(
+        name: String,
+        dark: Boolean = false,
+        act: ComposeContentTestRule.() -> Unit = {},
+        content: @Composable () -> Unit,
+    ) {
         compose.setContent { OpenScalesTheme(darkTheme = dark, dynamicColor = false, content = content) }
+        compose.waitForIdle()
+        compose.act()
         compose.waitForIdle()
         captureScreenRoboImage("$DIR/$name.png")
     }

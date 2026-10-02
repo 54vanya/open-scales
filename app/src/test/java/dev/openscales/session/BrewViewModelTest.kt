@@ -7,6 +7,8 @@ import dev.openscales.protocol.Frame
 import dev.openscales.protocol.ScaleModel
 import dev.openscales.protocol.TimerState
 import dev.openscales.recipe.BuiltInRecipes
+import dev.openscales.recipe.PourFocus
+import dev.openscales.recipe.Recipe
 import dev.openscales.recipe.RecipeTimeline
 import dev.openscales.sound.StepSignal
 import dev.openscales.ui.brew.BrewPhase
@@ -32,7 +34,7 @@ class BrewViewModelTest {
         override suspend fun clear() = Unit
     }
 
-    private class Env(scope: TestScope) {
+    private class Env(scope: TestScope, recipe: Recipe = BuiltInRecipes.hoffmannV60) {
         val transports = mutableListOf<FakeBleTransport>()
         val repository = ScaleRepository(
             scope = scope.backgroundScope,
@@ -42,8 +44,9 @@ class BrewViewModelTest {
         )
         val signals = mutableListOf<Pair<Long, StepSignal>>()
         val brew = BrewViewModel(
-            repository, BuiltInRecipes.hoffmannV60, scope.backgroundScope, scope.backgroundScope,
+            repository, recipe, scope.backgroundScope, scope.backgroundScope,
             signal = { signals += scope.testScheduler.currentTime to it },
+            nowMs = { scope.testScheduler.currentTime },
         )
         val scale get() = transports.last()
 
@@ -85,6 +88,96 @@ class BrewViewModelTest {
         weigh(env, 0.0)
         assertEquals(BrewPhase.READY, env.brew.ui.value.phase)
         return env
+    }
+
+    private fun Env.holds() = brew.ui.value.holdWater
+
+    @Test
+    fun `wait step holds the water until the pour stops near the target`() = runTest {
+        val env = readyToBrew()
+        start(env)
+        weigh(env, 2.0)
+        // 0:13,3 — «Взболтайте» 0:12–0:17, а цветение (30 г) ещё льётся.
+        settle(13_300)
+        weigh(env, 20.0)
+        assertTrue(env.holds())
+        weigh(env, 26.0)
+        assertTrue(env.holds())
+
+        // Встал на 28 г (осталось 2): отпускает ровно через 1,5 с — без новых кадров веса.
+        weigh(env, 28.0)
+        settle(1_499)
+        assertTrue(env.holds())
+        settle(1)
+        assertFalse(env.holds())
+
+        // Отпущенная вода держится до следующего шага воды: ранний пролив отсчёт не сбивает.
+        settle(20_000)
+        weigh(env, 40.0)
+        assertFalse(env.holds())
+
+        // 1:49 — «Подождите» 1:45–2:00 после «Налейте» до 250 г, а налито 200: держит, пока не дольют.
+        settle(70_000)
+        weigh(env, 200.0)
+        settle(5_000)
+        assertEquals(6, env.brew.timeline.stepAt(env.brew.ui.value.timelineSeconds))
+        assertTrue(env.holds())
+        weigh(env, 249.0)
+        settle(1_500)
+        assertFalse(env.holds())
+    }
+
+    @Test
+    fun `underpour holds the water, overpour lets it go`() = runTest {
+        val env = readyToBrew()
+        start(env)
+        weigh(env, 2.0)
+        // 0:20 — «Подождите», в цветение налито 25 г из 30: стоит, но осталось 5 г.
+        settle(20_000)
+        weigh(env, 25.0)
+        settle(5_000)
+        assertTrue(env.holds())
+        // Осталось ровно 3 г — ещё держит.
+        weigh(env, 27.0)
+        settle(3_000)
+        assertTrue(env.holds())
+        // Перелив на 6 г: «осталось» меньше нуля — отпускает.
+        weigh(env, 36.0)
+        settle(1_500)
+        assertFalse(env.holds())
+    }
+
+    @Test
+    fun `the end of the recipe holds the last pour`() = runTest {
+        val recipe = Recipe(
+            id = "user:one-pour",
+            title = dev.openscales.recipe.Text.Plain("Налейте"),
+            defaultDoseG = 15,
+            description = null,
+            items = listOf(dev.openscales.recipe.RecipeItem.Step(dev.openscales.recipe.Text.Plain("Налейте"), 105, targetG = 180)),
+        )
+        val env = Env(this, recipe)
+        env.connect(this)
+        weigh(env, 15.0)
+        env.brew.fixDose()
+        runCurrent()
+        weigh(env, 0.0)
+        start(env)
+        weigh(env, 2.0)
+
+        // Время вышло на 1:45, а на весах 170 г и ещё льётся: итога нет, табло держит воду.
+        settle(104_000)
+        weigh(env, 165.0)
+        settle(1_000)
+        weigh(env, 170.0)
+        settle(1_000)
+        assertEquals(BrewPhase.FINISHED, env.brew.ui.value.phase)
+        assertTrue(env.holds())
+        weigh(env, 179.0)
+        settle(1_499)
+        assertTrue(env.holds())
+        settle(1)
+        assertFalse(env.holds())
     }
 
     @Test
@@ -265,6 +358,22 @@ class BrewViewModelTest {
     }
 
     @Test
+    fun `precise brew time runs between seconds and stops on pause`() = runTest {
+        val env = readyToBrew()
+        assertNull(env.brew.brewElapsedMs())
+        start(env)
+        weigh(env, 2.0)
+        settle(1_500)
+        assertEquals(1_500.0, env.brew.brewElapsedMs()!!.toDouble(), 100.0)
+        assertEquals(1, env.brew.ui.value.seconds)
+        env.brew.togglePause()
+        runCurrent()
+        val paused = env.brew.brewElapsedMs()!!
+        settle(2_000)
+        assertEquals(paused, env.brew.brewElapsedMs())
+    }
+
+    @Test
     fun `finish pauses the shared timer at the current time`() = runTest {
         val env = readyToBrew()
         start(env)
@@ -358,6 +467,107 @@ class BrewViewModelTest {
         assertEquals(12.0, env.brew.ui.value.previewDoseG(15.0), 1e-6)
         assertEquals(200.0, env.brew.recipe.totalWaterG(env.brew.ui.value.previewDoseG(15.0)), 1e-4)
     }
+
+    // region шаг «Тара»
+
+    /** Ван Бюнник, доза 30 г, пролив начался: «Тара» 1:15–1:25, «Разбавьте» 1:25–1:40 до 100 г от тары. */
+    private fun TestScope.brewingVanBunnik(): Env {
+        val env = Env(this, BuiltInRecipes.vanBunnikAeropress)
+        env.connect(this)
+        weigh(env, 30.0)
+        env.brew.fixDose()
+        runCurrent()
+        start(env)
+        weigh(env, 2.0)
+        runCurrent()
+        assertEquals(BrewPhase.RUNNING, env.brew.ui.value.phase)
+        return env
+    }
+
+    private fun Env.focus() = ui().let { PourFocus.of(brew.timeline, 30.0, it.weightG!!, it.timelineSeconds, it.tare) }
+
+    private fun Env.ui() = brew.ui.value
+
+    @Test
+    fun `tare step waits for the button and never tares by itself`() = runTest {
+        val env = brewingVanBunnik()
+        weigh(env, 100.0)
+        settle(60_000)
+        assertFalse(env.ui().awaitingTare)
+        val taresBefore = env.scale.writesOf(Cmd.TARE).size
+        // 1:16 — шаг «Тара»: концентрат 70 г в чашке, аэропресс снят.
+        settle(16_000)
+        weigh(env, 70.0)
+        assertTrue(env.ui().awaitingTare)
+        assertTrue(env.ui().canTarePart)
+        assertNull(env.focus())
+        // Первая часть застыла на весе к началу шага «Тара».
+        assertEquals(100.0, env.ui().pouredIn(0), 1e-6)
+        // Время дошло до «Разбавьте», тару не нажимали — весы не тарировались, вода части не считается.
+        settle(10_000)
+        weigh(env, 90.0)
+        assertTrue(env.ui().awaitingTare)
+        assertEquals(taresBefore, env.scale.writesOf(Cmd.TARE).size)
+        assertEquals(0.0, env.ui().pouredIn(1), 1e-6)
+    }
+
+    @Test
+    fun `tare button zeroes the part and water counts from it`() = runTest {
+        val env = brewingVanBunnik()
+        weigh(env, 100.0)
+        settle(76_000)
+        weigh(env, 70.0)
+        val taresBefore = env.scale.writesOf(Cmd.TARE).size
+        env.brew.tarePart()
+        runCurrent()
+        assertTrue(env.ui().tareBusy)
+        assertFalse(env.ui().canTarePart)
+        env.brew.tarePart()
+        settle(TARE_ACK_MS)
+        assertEquals("one tare", taresBefore + 1, env.scale.writesOf(Cmd.TARE).size)
+        // Кадр до срабатывания тары — не ноль части.
+        weigh(env, 70.0)
+        assertTrue(env.ui().awaitingTare)
+        weigh(env, 0.2)
+        assertFalse(env.ui().awaitingTare)
+        assertFalse(env.ui().tareBusy)
+        weigh(env, 40.2)
+        val focus = env.focus()!!
+        assertEquals(6, focus.itemIndex)
+        assertEquals(60.0, focus.leftG, 1e-6)
+        assertEquals(100.0, env.ui().pouredIn(0), 1e-6)
+    }
+
+    @Test
+    fun `rejected part tare keeps the buttons`() = runTest {
+        val env = brewingVanBunnik()
+        settle(76_000)
+        weigh(env, 70.0)
+        env.scale.rejectedWrites += Cmd.TARE
+        env.brew.tarePart()
+        settle(5_000)
+        assertTrue(env.ui().awaitingTare)
+        assertFalse(env.ui().tareBusy)
+        assertTrue(env.ui().canTarePart)
+    }
+
+    @Test
+    fun `no tare button after the end or in recipes without tare`() = runTest {
+        val env = brewingVanBunnik()
+        settle(105_000)
+        weigh(env, 70.0)
+        assertEquals(BrewPhase.FINISHED, env.ui().phase)
+        assertFalse(env.ui().awaitingTare)
+
+        val hoffmann = readyToBrew()
+        start(hoffmann)
+        weigh(hoffmann, 2.0)
+        settle(100_000)
+        weigh(hoffmann, 100.0)
+        assertFalse(hoffmann.ui().awaitingTare)
+    }
+
+    // endregion
 
     private companion object {
         /** Сколько ждать ответа весов на тару: команда идёт через очередь сессии. */

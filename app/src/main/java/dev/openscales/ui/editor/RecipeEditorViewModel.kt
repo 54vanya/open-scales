@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import dev.openscales.recipe.Difficulty
 import dev.openscales.recipe.DraftError
 import dev.openscales.recipe.DraftItem
+import dev.openscales.recipe.ItemTemplate
 import dev.openscales.recipe.Recipe
 import dev.openscales.recipe.RecipeCategory
 import dev.openscales.recipe.RecipeDraft
@@ -29,6 +30,8 @@ data class EditorUi(
     val showErrors: Boolean = false,
     /** Есть несохранённые правки: выход спрашивает подтверждение. */
     val dirty: Boolean = false,
+    /** Шаг, в чьё поле рубежа поставить фокус (новый «Пролив»); сбрасывается, как только фокус поставлен. */
+    val focusTarget: Long? = null,
 ) {
     val errors: List<DraftError> = if (showErrors) validate(draft) else emptyList()
 }
@@ -74,12 +77,26 @@ class RecipeEditorViewModel(
 
     fun updateItem(key: Long, change: (DraftItem) -> DraftItem) = edit { it.update(key, change) }
 
-    /** Вставить шаг или подпись на позицию [index]; новый элемент раскрыт. */
-    fun insert(index: Int, step: Boolean) {
+    /**
+     * Вставить элемент из заготовки [template] на позицию [index]; [title] — название шага на языке интерфейса.
+     * Новый элемент раскрыт, у «Пролива» фокус переходит в поле рубежа.
+     */
+    fun insert(index: Int, template: ItemTemplate, title: String) {
         val key = _ui.value.draft.nextKey
-        edit { it.insert(index, if (step) DraftItem.Step(key) else DraftItem.Hint(key)) }
-        _ui.update { it.copy(expanded = it.expanded + key) }
+        edit { it.insert(index, template.newItem(key, title)) }
+        _ui.update {
+            it.copy(expanded = it.expanded + key, focusTarget = if (template == ItemTemplate.POUR) key else null)
+        }
     }
+
+    /** Копия элемента сразу после него, раскрытая. */
+    fun duplicate(key: Long) {
+        val copyKey = _ui.value.draft.nextKey
+        edit { it.duplicate(key, copyKey) }
+        _ui.update { it.copy(expanded = it.expanded + copyKey) }
+    }
+
+    fun focusConsumed() = _ui.update { it.copy(focusTarget = null) }
 
     fun move(key: Long, delta: Int) = edit { it.move(key, delta) }
 

@@ -44,6 +44,69 @@ class RecipeTest {
         )
     }
 
+    // region части рецепта
+
+    private fun step(target: Int? = null, tare: Boolean = false, duration: Int = 10) =
+        RecipeItem.Step(Text.Plain("s"), duration, targetG = target, tare = tare)
+
+    private val parted = Recipe("x", Text.Plain("x"), 15, null, listOf(step(100), step(tare = true), step(50)))
+
+    @Test
+    fun `targets restart after a tare`() {
+        assertEquals(listOf(0, 1, 1), parted.partOf)
+        assertEquals(2, parted.partCount)
+        assertEquals(listOf(listOf(0 to 100.0), listOf(2 to 50.0)), parted.targetsByPart(15.0))
+        assertEquals(150.0, parted.totalWaterG(15.0), 1e-9)
+        assertEquals(1, hoffman.partCount)
+        assertEquals(250.0, hoffman.totalWaterG(15.0), 1e-9)
+    }
+
+    @Test
+    fun `part by time`() {
+        val t = RecipeTimeline(parted)
+        assertEquals(0, t.partAt(null))
+        assertEquals(0, t.partAt(5))
+        assertEquals(1, t.partAt(10))
+        assertEquals(1, t.partAt(30))
+        assertEquals(0, timeline.partAt(100))
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `targets decreasing within a part are rejected`() {
+        Recipe("x", Text.Plain("x"), 15, null, listOf(step(100), step(tare = true), step(50), step(40)))
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `tare step has no target`() {
+        step(100, tare = true)
+    }
+
+    @Test
+    fun `tare state`() {
+        val start = TareState()
+        assertEquals(70.0, start.pouredIn(0, 70.0), 1e-9)
+        assertEquals(0.0, start.pouredIn(1, 70.0), 1e-9)
+        val frozen = start.freezeBefore(1, 70.0)
+        assertEquals(70.0, frozen.pouredIn(0, 5.0), 1e-9)
+        assertEquals(frozen, frozen.freezeBefore(1, 90.0))
+        val tared = frozen.tared(1, 0.3)
+        assertEquals(39.7, tared.pouredIn(1, 40.0), 1e-9)
+        assertEquals(70.0, tared.pouredIn(0, 40.0), 1e-9)
+    }
+
+    @Test
+    fun `distribution by part`() {
+        val tare = TareState().freezeBefore(1, 90.0).tared(1, 0.0)
+        val water = PourDistribution.values(parted, 15.0, { tare.pouredIn(it, 40.0) }, StepWeightMode.REMAINING)
+        assertEquals(setOf(0, 2), water.keys)
+        assertEquals(10.0, water.getValue(0).grams, 1e-9)
+        assertEquals(10.0, water.getValue(2).grams, 1e-9)
+        val waiting = PourDistribution.values(parted, 15.0, { TareState().pouredIn(it, 40.0) }, StepWeightMode.REMAINING)
+        assertEquals(50.0, waiting.getValue(2).grams, 1e-9)
+    }
+
+    // endregion
+
     // region timeline
 
     @Test

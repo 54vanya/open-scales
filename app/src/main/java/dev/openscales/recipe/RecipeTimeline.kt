@@ -34,6 +34,16 @@ class RecipeTimeline(val recipe: Recipe) {
         return recipe.items.indices.firstOrNull { isStep(it) && seconds < ends[it] }
     }
 
+    /**
+     * Часть рецепта, в которой идёт время [seconds]: часть текущего шага, после конца времени — последняя,
+     * до начала пролива — первая.
+     */
+    fun partAt(seconds: Int?): Int {
+        if (seconds == null || seconds < 0) return 0
+        val step = stepAt(seconds) ?: return recipe.partCount - 1
+        return recipe.partOf[step]
+    }
+
     /** Сколько секунд осталось в шаге [index] ко времени [seconds]. */
     fun remainingIn(index: Int, seconds: Int): Int = (ends[index] - seconds).coerceAtLeast(0)
 

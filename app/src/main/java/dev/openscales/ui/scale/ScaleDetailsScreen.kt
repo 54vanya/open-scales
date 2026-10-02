@@ -309,7 +309,7 @@ fun ScaleDetailsScreen(
                 TextButton(onClick = {
                     confirm = null
                     if (c == Confirm.FORGET) actions.onForget() else actions.onFactoryReset()
-                }) { Text(stringResource(R.string.confirm)) }
+                }) { Text(stringResource(if (c == Confirm.FORGET) R.string.confirm_forget else R.string.confirm_factory_reset)) }
             },
             dismissButton = { TextButton(onClick = { confirm = null }) { Text(stringResource(R.string.cancel)) } },
         )

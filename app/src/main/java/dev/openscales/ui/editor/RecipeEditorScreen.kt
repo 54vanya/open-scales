@@ -7,8 +7,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.selection.toggleable
-import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,6 +25,11 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material.icons.rounded.HourglassTop
+import androidx.compose.material.icons.rounded.PanTool
+import androidx.compose.material.icons.rounded.Scale
+import androidx.compose.material.icons.rounded.WaterDrop
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
@@ -50,16 +53,19 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -78,8 +84,10 @@ import dev.openscales.recipe.DraftError
 import dev.openscales.recipe.DraftField
 import dev.openscales.recipe.DraftItem
 import dev.openscales.recipe.DraftProblem
+import dev.openscales.recipe.ItemTemplate
 import dev.openscales.recipe.RecipeCategory
 import dev.openscales.recipe.RecipeDraft
+import dev.openscales.recipe.StepKind
 import dev.openscales.recipe.toDraft
 import dev.openscales.ui.components.ConnectedChoice
 import dev.openscales.ui.components.formatTime
@@ -89,6 +97,7 @@ import dev.openscales.ui.recipes.StepCard
 import dev.openscales.ui.recipes.labelRes
 import dev.openscales.ui.recipes.titleRes
 import dev.openscales.ui.theme.OpenScalesTheme
+import java.text.NumberFormat
 
 /** Действия редактора — всё, что экран отдаёт наверх. */
 interface EditorActions {
@@ -98,7 +107,9 @@ interface EditorActions {
     fun setDifficulty(value: Difficulty)
     fun setDescription(value: String)
     fun updateItem(key: Long, change: (DraftItem) -> DraftItem)
-    fun insert(index: Int, step: Boolean)
+    fun insert(index: Int, template: ItemTemplate, title: String)
+    fun duplicate(key: Long)
+    fun focusConsumed()
     fun move(key: Long, delta: Int)
     fun remove(key: Long)
     fun toggle(key: Long)
@@ -124,6 +135,14 @@ fun RecipeEditorScreen(
 ) {
     val draft = ui.draft
     val times = draft.times()
+    val increments = draft.increments()
+    // Новый «Пролив» мог встать за нижним краем: элемент вне экрана не скомпонован, и фокусу некуда встать.
+    ui.focusTarget?.let { key ->
+        LaunchedEffect(key) {
+            val index = editorListIndex(draft, key)
+            if (listState.layoutInfo.visibleItemsInfo.none { it.index == index }) listState.scrollToItem(index)
+        }
+    }
     val gram = stringResource(WeightUnit.GRAM.symbolRes())
 
     Scaffold(
@@ -170,7 +189,7 @@ fun RecipeEditorScreen(
             item(key = "recipe") { RecipeCard(draft, ui.errors, gram, actions) }
             item(key = "add:first") {
                 Column(Modifier.animateItem()) {
-                    AddButton(onAdd = { step -> actions.insert(0, step) })
+                    AddButton(onAdd = { template, title -> actions.insert(0, template, title) })
                     if (ui.errors.any { it == DraftError.NoSteps }) {
                         Text(
                             stringResource(R.string.editor_error_no_steps),
@@ -205,6 +224,7 @@ fun RecipeEditorScreen(
                                 gram = gram,
                                 canMoveUp = index > 0,
                                 canMoveDown = index < draft.items.lastIndex,
+                                focusTarget = item.key == ui.focusTarget,
                                 actions = actions,
                             )
                             item is DraftItem.Step -> StepCard(
@@ -214,9 +234,14 @@ fun RecipeEditorScreen(
                                 remaining = null,
                                 water = null,
                                 unit = WeightUnit.GRAM,
-                                target = item.targetG.ifBlank { null }?.let { stringResource(R.string.value_with_unit, it, gram) },
+                                target = item.targetG.takeIf { item.kind == StepKind.POUR && it.isNotBlank() }
+                                    ?.let { stringResource(R.string.value_with_unit, it, gram) },
+                                targetIncrement = increments[item.key]?.let {
+                                    stringResource(R.string.editor_increment, stringResource(R.string.value_with_unit, it.toString(), gram))
+                                },
                                 onClick = { actions.toggle(item.key) },
-                                showsTime = item.showTime,
+                                showsTime = item.kind == StepKind.ACTION,
+                                isTare = item.kind == StepKind.TARE,
                             )
                             item is DraftItem.Hint -> HintRow(
                                 item.text.ifBlank { stringResource(R.string.editor_item_hint) },
@@ -226,7 +251,7 @@ fun RecipeEditorScreen(
                     }
                 }
                 item(key = "add:${item.key}") {
-                    Box(Modifier.animateItem()) { AddButton(onAdd = { step -> actions.insert(index + 1, step) }) }
+                    Box(Modifier.animateItem()) { AddButton(onAdd = { template, title -> actions.insert(index + 1, template, title) }) }
                 }
             }
         }
@@ -271,8 +296,31 @@ private fun RecipeCard(draft: RecipeDraft, errors: List<DraftError>, gram: Strin
                 error = null,
                 singleLine = false,
             )
+            Text(
+                summaryText(draft, gram),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
+}
+
+/** «250 г воды · 1:16,7 · 3:30»: итог воды и соотношение — если их можно посчитать, время — всегда. */
+@Composable
+private fun summaryText(draft: RecipeDraft, gram: String): String {
+    val summary = draft.summary()
+    val locale = LocalConfiguration.current.locales[0]
+    val ratio = NumberFormat.getNumberInstance(locale).apply {
+        maximumFractionDigits = 1
+        isGroupingUsed = false
+    }
+    return listOfNotNull(
+        summary.waterG?.let {
+            stringResource(R.string.editor_summary_water, stringResource(R.string.value_with_unit, it.toString(), gram))
+        },
+        summary.ratio?.let { "1:" + ratio.format(it) },
+        formatTime(summary.totalS),
+    ).joinToString(" · ")
 }
 
 /** Оборудование рецепта: вариантов больше, чем помещается в ряд кнопок, — выпадающий список. */
@@ -316,8 +364,17 @@ private fun ExpandedItem(
     canMoveUp: Boolean,
     canMoveDown: Boolean,
     actions: EditorActions,
+    /** Поставить фокус в поле рубежа (новый «Пролив»). */
+    focusTarget: Boolean = false,
 ) {
     fun error(field: DraftField) = errors.firstOrNull { it.field == field }
+    val targetFocus = remember { FocusRequester() }
+    if (focusTarget) {
+        LaunchedEffect(Unit) {
+            targetFocus.requestFocus()
+            actions.focusConsumed()
+        }
+    }
     // Поле в фокусе уходит вместе с карточкой — снимаем фокус, иначе на экране остаётся ручка курсора.
     val focus = LocalFocusManager.current
     Card(
@@ -330,13 +387,27 @@ private fun ExpandedItem(
                 .padding(start = 16.dp, end = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            // Вид шага задан при добавлении и здесь только подписан.
+            val kind = (item as? DraftItem.Step)?.kind
             Icon(
-                if (item is DraftItem.Step) Icons.Rounded.Timer else Icons.Rounded.Info,
+                when (kind) {
+                    StepKind.POUR -> Icons.Rounded.WaterDrop
+                    StepKind.ACTION -> Icons.Rounded.Timer
+                    StepKind.TARE -> Icons.Rounded.Scale
+                    null -> Icons.Rounded.Info
+                },
                 contentDescription = null,
                 modifier = Modifier.padding(end = 12.dp),
             )
             Text(
-                stringResource(if (item is DraftItem.Step) R.string.editor_item_step else R.string.editor_item_hint),
+                stringResource(
+                    when (kind) {
+                        StepKind.POUR -> R.string.editor_template_pour
+                        StepKind.ACTION -> R.string.editor_kind_action
+                        StepKind.TARE -> R.string.tare
+                        null -> R.string.editor_item_hint
+                    },
+                ),
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.weight(1f),
             )
@@ -345,6 +416,9 @@ private fun ExpandedItem(
             }
             IconButton(onClick = { actions.move(item.key, +1) }, enabled = canMoveDown) {
                 Icon(Icons.Rounded.KeyboardArrowDown, stringResource(R.string.editor_move_down))
+            }
+            IconButton(onClick = { focus.clearFocus(); actions.duplicate(item.key) }) {
+                Icon(Icons.Rounded.ContentCopy, stringResource(R.string.editor_duplicate))
             }
             IconButton(onClick = { focus.clearFocus(); actions.remove(item.key) }) {
                 Icon(Icons.Rounded.Delete, stringResource(R.string.editor_delete_item))
@@ -375,39 +449,27 @@ private fun ExpandedItem(
                         keyboardType = KeyboardType.Number,
                         visualTransformation = DurationTransformation,
                     )
-                    EditorField(
-                        value = item.targetG,
-                        onValueChange = { v ->
-                            actions.updateItem(item.key) { (it as DraftItem.Step).copy(targetG = v.filter(Char::isDigit)) }
-                        },
-                        label = stringResource(R.string.editor_field_target),
-                        error = error(DraftField.TARGET),
-                        hint = stringResource(R.string.editor_target_hint),
-                        suffix = gram,
-                        keyboardType = KeyboardType.Number,
-                    )
+                    // Вода — только у пролива: у действия и тары её поля нет вовсе.
+                    if (item.kind == StepKind.POUR) {
+                        EditorField(
+                            value = item.targetG,
+                            onValueChange = { v ->
+                                actions.updateItem(item.key) { (it as DraftItem.Step).copy(targetG = v.filter(Char::isDigit)) }
+                            },
+                            label = stringResource(R.string.editor_field_target),
+                            error = error(DraftField.TARGET),
+                            hint = stringResource(R.string.editor_target_hint),
+                            suffix = gram,
+                            keyboardType = KeyboardType.Number,
+                            modifier = Modifier.focusRequester(targetFocus),
+                        )
+                    }
                     EditorField(
                         value = item.note,
                         onValueChange = { v -> actions.updateItem(item.key) { (it as DraftItem.Step).copy(note = v) } },
                         label = stringResource(R.string.editor_field_note),
                         error = null,
                     )
-                    // Табло варки на этом шаге показывает крупно время до конца шага, а не воду.
-                    val setShowTime = { on: Boolean -> actions.updateItem(item.key) { (it as DraftItem.Step).copy(showTime = on) } }
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .toggleable(value = item.showTime, role = Role.Switch, onValueChange = setShowTime)
-                            .padding(vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            stringResource(R.string.editor_show_time),
-                            style = MaterialTheme.typography.bodyLarge,
-                            modifier = Modifier.weight(1f),
-                        )
-                        Switch(checked = item.showTime, onCheckedChange = null)
-                    }
                 }
                 is DraftItem.Hint -> EditorField(
                     value = item.text,
@@ -427,6 +489,7 @@ private fun EditorField(
     onValueChange: (String) -> Unit,
     label: String,
     error: DraftError.Field?,
+    modifier: Modifier = Modifier,
     hint: String? = null,
     suffix: String? = null,
     singleLine: Boolean = true,
@@ -448,13 +511,22 @@ private fun EditorField(
             keyboardType = keyboardType,
             capitalization = if (keyboardType == KeyboardType.Text) KeyboardCapitalization.Sentences else KeyboardCapitalization.None,
         ),
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
     )
 }
 
 @Composable
 private fun errorText(error: DraftError.Field): String = when (error.problem) {
-    DraftProblem.EMPTY -> stringResource(R.string.editor_error_empty)
+    DraftProblem.EMPTY -> stringResource(
+        when (error.field) {
+            DraftField.TITLE -> R.string.editor_error_empty_title
+            DraftField.DOSE -> R.string.editor_error_empty_dose
+            DraftField.STEP_TITLE -> R.string.editor_error_empty_step_title
+            DraftField.DURATION -> R.string.editor_error_empty_duration
+            DraftField.HINT_TEXT -> R.string.editor_error_empty_hint
+            DraftField.TARGET -> R.string.editor_error_empty_water
+        },
+    )
     DraftProblem.ZERO -> stringResource(R.string.editor_error_zero)
     DraftProblem.INVALID -> stringResource(
         if (error.field == DraftField.DURATION) R.string.editor_error_duration else R.string.editor_error_grams,
@@ -493,26 +565,34 @@ private object DurationTransformation : VisualTransformation {
     }
 }
 
-/** «+» между элементами: меню «Шаг» / «Подпись». */
+/** «+» между элементами: меню заготовок «Пролив», «Ожидание», «Действие», «Тара», «Подпись». */
 @Composable
-private fun AddButton(onAdd: (step: Boolean) -> Unit) {
+private fun AddButton(onAdd: (template: ItemTemplate, title: String) -> Unit) {
     var menu by remember { mutableStateOf(false) }
+    // Названия шагов — те же слова, что во встроенных рецептах, на языке интерфейса.
+    val pour = stringResource(R.string.recipe_step_pour)
+    val wait = stringResource(R.string.recipe_step_wait)
+    val tare = stringResource(R.string.recipe_step_tare)
     Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
         Box {
             FilledTonalIconButton(onClick = { menu = true }) {
                 Icon(Icons.Rounded.Add, stringResource(R.string.editor_add))
             }
             DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.editor_item_step)) },
-                    leadingIcon = { Icon(Icons.Rounded.Timer, contentDescription = null) },
-                    onClick = { menu = false; onAdd(true) },
-                )
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.editor_item_hint)) },
-                    leadingIcon = { Icon(Icons.Rounded.Info, contentDescription = null) },
-                    onClick = { menu = false; onAdd(false) },
-                )
+                listOf(
+                    Triple(ItemTemplate.POUR, R.string.editor_template_pour, Icons.Rounded.WaterDrop) to pour,
+                    Triple(ItemTemplate.WAIT, R.string.editor_template_wait, Icons.Rounded.HourglassTop) to wait,
+                    Triple(ItemTemplate.ACTION, R.string.editor_template_action, Icons.Rounded.PanTool) to "",
+                    Triple(ItemTemplate.TARE, R.string.tare, Icons.Rounded.Scale) to tare,
+                    Triple(ItemTemplate.HINT, R.string.editor_item_hint, Icons.Rounded.Info) to "",
+                ).forEach { (option, title) ->
+                    val (template, label, icon) = option
+                    DropdownMenuItem(
+                        text = { Text(stringResource(label)) },
+                        leadingIcon = { Icon(icon, contentDescription = null) },
+                        onClick = { menu = false; onAdd(template, title) },
+                    )
+                }
             }
         }
     }
@@ -525,7 +605,9 @@ private object NoActions : EditorActions {
     override fun setDifficulty(value: Difficulty) = Unit
     override fun setDescription(value: String) = Unit
     override fun updateItem(key: Long, change: (DraftItem) -> DraftItem) = Unit
-    override fun insert(index: Int, step: Boolean) = Unit
+    override fun insert(index: Int, template: ItemTemplate, title: String) = Unit
+    override fun duplicate(key: Long) = Unit
+    override fun focusConsumed() = Unit
     override fun move(key: Long, delta: Int) = Unit
     override fun remove(key: Long) = Unit
     override fun toggle(key: Long) = Unit

@@ -51,6 +51,59 @@ data class RecipeDraft(
         }
     }
 
+    /**
+     * Прибавка каждого шага с разобранным рубежом: рубеж минус ближайший разобранный рубеж выше (у первого — минус
+     * ноль). Шаги, чей рубеж меньше рубежа выше, не попадают: их рубеж — ошибка.
+     */
+    fun increments(): Map<Long, Int> = buildMap {
+        var previous = 0
+        for (item in items) {
+            // После шага «Тара» рубежи считаются от нуля заново.
+            if (item.isTare) previous = 0
+            val target = (item as? DraftItem.Step)?.waterG ?: continue
+            if (target >= previous) put(item.key, target - previous)
+            previous = maxOf(previous, target)
+        }
+    }
+
+    /**
+     * Копия элемента [key] сразу после него под ключом [newKey]. Рубеж копии шага сдвигается на прибавку шага:
+     * так серия одинаковых проливов набирается дублированием. Без прибавки поле рубежа копируется как есть.
+     */
+    fun duplicate(key: Long, newKey: Long): RecipeDraft {
+        val index = indexOf(key)
+        if (index < 0) return this
+        val copy = when (val item = items[index]) {
+            is DraftItem.Step -> {
+                val target = item.waterG
+                val increment = increments()[key]
+                item.copy(
+                    key = newKey,
+                    targetG = if (target != null && increment != null) (target + increment).toString() else item.targetG,
+                )
+            }
+            is DraftItem.Hint -> item.copy(key = newKey)
+        }
+        return insert(index + 1, copy)
+    }
+
+    /** Сводка для карточки рецепта; поля, которые не разобрать, не учитываются. */
+    fun summary(): DraftSummary {
+        // Вода — сумма последних рубежей всех частей: после шага «Тара» рубежи считаются заново.
+        val lastByPart = mutableListOf<Int?>(null)
+        for (item in items) {
+            if (item.isTare) lastByPart += null
+            (item as? DraftItem.Step)?.waterG?.let { lastByPart[lastByPart.lastIndex] = it }
+        }
+        val water = lastByPart.filterNotNull().takeIf { it.isNotEmpty() }?.sum()
+        val dose = parseGrams(doseG)?.takeIf { it > 0 }
+        return DraftSummary(
+            waterG = water,
+            ratio = if (water != null && dose != null) water.toDouble() / dose else null,
+            totalS = times().lastOrNull()?.last ?: 0,
+        )
+    }
+
     /** Готовый рецепт; только для черновика без ошибок [validate]. */
     fun toRecipe(): Recipe {
         check(validate(this).isEmpty()) { "draft has errors" }
@@ -65,8 +118,9 @@ data class RecipeDraft(
                         title = Text.Plain(item.title.trim()),
                         durationS = parseDuration(item.duration)!!,
                         note = item.note.trim().takeIf { it.isNotEmpty() }?.let { Text.Plain(it) },
-                        targetG = item.targetG.takeIf { it.isNotBlank() }?.let { parseGrams(it)!! },
-                        showTime = item.showTime,
+                        // Вода — только у пролива: у действия и тары поля нет, даже если в черновике что-то осталось.
+                        targetG = item.waterG,
+                        tare = item.kind == StepKind.TARE,
                     )
                     is DraftItem.Hint -> RecipeItem.Hint(Text.Plain(item.text.trim()))
                 }
@@ -79,6 +133,7 @@ data class RecipeDraft(
     companion object {
         const val DEFAULT_DOSE_G = 15
         const val NEW_STEP_DURATION_S = 30
+        const val TARE_DURATION_S = 15
         const val USER_ID_PREFIX = "user:"
 
         fun newId(): String = USER_ID_PREFIX + UUID.randomUUID()
@@ -96,11 +151,39 @@ sealed interface DraftItem {
         val duration: String = durationDigits(RecipeDraft.NEW_STEP_DURATION_S),
         val targetG: String = "",
         val note: String = "",
-        /** Крупно — время до конца шага. */
-        val showTime: Boolean = false,
-    ) : DraftItem
+        /** Вид шага задаётся при добавлении и дальше не меняется. */
+        val kind: StepKind = StepKind.POUR,
+    ) : DraftItem {
+        /** Вода шага, если это пролив и число разобрано. */
+        val waterG: Int? get() = if (kind == StepKind.POUR) parseGrams(targetG) else null
+    }
 
     data class Hint(override val key: Long, val text: String = "") : DraftItem
+
+    val isTare: Boolean get() = this is Step && kind == StepKind.TARE
+}
+
+/**
+ * Вид шага: [POUR] — пролив, вода обязательна, табло показывает воду; [ACTION] — без воды, табло показывает
+ * обратный отсчёт (подождать, взболтать, прожать); [TARE] — шаг «Тара», рубежи после него считаются от нуля.
+ */
+enum class StepKind { POUR, ACTION, TARE }
+
+/** Итог черновика: вода (последний рубеж), соотношение вода / доза и общая длительность, с. */
+data class DraftSummary(val waterG: Int?, val ratio: Double?, val totalS: Int)
+
+/** Заготовка нового элемента из меню «+». После вставки это обычный шаг или подпись. */
+enum class ItemTemplate {
+    POUR, WAIT, ACTION, TARE, HINT;
+
+    /** Новый элемент; [title] — название шага на языке интерфейса (у «Действия» и подписи не нужно). */
+    fun newItem(key: Long, title: String = ""): DraftItem = when (this) {
+        POUR -> DraftItem.Step(key, title = title)
+        WAIT -> DraftItem.Step(key, title = title, kind = StepKind.ACTION)
+        ACTION -> DraftItem.Step(key, kind = StepKind.ACTION)
+        TARE -> DraftItem.Step(key, title = title, duration = durationDigits(RecipeDraft.TARE_DURATION_S), kind = StepKind.TARE)
+        HINT -> DraftItem.Hint(key)
+    }
 }
 
 /**
@@ -122,7 +205,11 @@ fun Recipe.toDraft(resolve: (Text) -> String, id: String = this.id): RecipeDraft
                 duration = durationDigits(item.durationS),
                 targetG = item.targetG?.toString().orEmpty(),
                 note = item.note?.let(resolve).orEmpty(),
-                showTime = item.showTime,
+                kind = when {
+                    item.tare -> StepKind.TARE
+                    item.targetG != null -> StepKind.POUR
+                    else -> StepKind.ACTION
+                },
             )
             is RecipeItem.Hint -> DraftItem.Hint(i.toLong(), resolve(item.text))
         }
@@ -185,7 +272,13 @@ fun validate(draft: RecipeDraft): List<DraftError> = buildList {
             is DraftItem.Step -> {
                 if (item.title.isBlank()) add(DraftError.Field(item.key, DraftField.STEP_TITLE, DraftProblem.EMPTY))
                 number(item.duration, item.key, DraftField.DURATION, ::parseDuration)?.let(::add)
-                if (item.targetG.isNotBlank()) {
+                // После шага «Тара» рубежи считаются от его нуля: рубеж выше него не ограничивает.
+                if (item.kind == StepKind.TARE) previous = null
+                // Вода обязательна у пролива; у действия и тары поля нет.
+                if (item.kind == StepKind.POUR && item.targetG.isBlank()) {
+                    add(DraftError.Field(item.key, DraftField.TARGET, DraftProblem.EMPTY))
+                }
+                if (item.kind == StepKind.POUR && item.targetG.isNotBlank()) {
                     val error = number(item.targetG, item.key, DraftField.TARGET, ::parseGrams)
                     val target = parseGrams(item.targetG)
                     when {

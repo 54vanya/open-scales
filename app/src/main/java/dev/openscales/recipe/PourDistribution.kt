@@ -34,6 +34,18 @@ object PourDistribution {
         }
     }
 
+    /**
+     * Значения шагов с целью по частям рецепта: у каждой части свои рубежи и свой налитый вес [pouredIn].
+     * Ключ — индекс элемента в `Recipe.items`.
+     */
+    fun values(recipe: Recipe, doseG: Double, pouredIn: (part: Int) -> Double, mode: StepWeightMode): Map<Int, StepWater> =
+        buildMap {
+            recipe.targetsByPart(doseG).forEachIndexed { part, targets ->
+                val water = values(targets.map { it.second }, pouredIn(part), mode)
+                targets.zip(water) { (index, _), value -> put(index, value) }
+            }
+        }
+
     /** Значения шагов с целью в выбранном режиме, в граммах. */
     fun values(targetsG: List<Double>, weightG: Double, mode: StepWeightMode): List<StepWater> =
         fill(targetsG, weightG).zip(targetsG) { f, c ->

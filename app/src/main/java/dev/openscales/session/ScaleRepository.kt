@@ -213,6 +213,12 @@ class ScaleRepository(
 
     suspend fun resetTimer() = applyTimer(TimerState.RESET)
 
+    /**
+     * Время общего таймера с точностью до миллисекунд — для расчётных ориентиров, которым мало целых секунд
+     * (идеальный уровень на полосе налива). Та же метка, от которой публикуются секунды.
+     */
+    fun timerElapsedMs(): Long = clock.elapsedMs(nowMs())
+
     private suspend fun applyTimer(target: TimerState) {
         // В режиме синхронизации состояние показывают весы, и оптимистичное переключение делает сессия.
         val scaleOwns = scaleOwnsTimer(state.value, syncTimer.value)

@@ -5,9 +5,12 @@ import androidx.lifecycle.viewModelScope
 import dev.openscales.protocol.TimerState
 import dev.openscales.recipe.PourDetector
 import dev.openscales.recipe.PourFocus
+import dev.openscales.recipe.PourStill
 import dev.openscales.recipe.TargetState
 import dev.openscales.recipe.Recipe
+import dev.openscales.recipe.RecipeItem
 import dev.openscales.recipe.RecipeTimeline
+import dev.openscales.recipe.TareState
 import dev.openscales.recipe.toGrams
 import dev.openscales.session.ScaleRepository
 import dev.openscales.session.ScaleState
@@ -15,7 +18,9 @@ import dev.openscales.sound.StepSignal
 import dev.openscales.ui.commandErrorRes
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -24,6 +29,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
@@ -45,6 +51,17 @@ data class BrewUi(
     val lastWeightG: Double,
     /** Время варки; до начала пролива — ноль, хотя общий таймер мог идти на вкладке «Весы». */
     val seconds: Int,
+    /** Нули частей рецепта: налитое в каждую часть считается от своей тары. */
+    val tare: TareState = TareState(),
+    /** Часть, где идёт время, ждёт тары: на табло и в ряду кнопок — «Тара». */
+    val awaitingTare: Boolean = false,
+    /** Тару части нажали, ждём ответа весов и ноль. */
+    val tareBusy: Boolean = false,
+    /**
+     * Вода шага воды ещё не улеглась (льётся или недолито 3 г и больше): шаг с крупным временем и конец рецепта
+     * показывают на табло воду, а не отсчёт и итог.
+     */
+    val holdWater: Boolean = false,
 ) {
     val started: Boolean get() = phase == BrewPhase.RUNNING || phase == BrewPhase.PAUSED || phase == BrewPhase.FINISHED
 
@@ -53,6 +70,12 @@ data class BrewUi(
 
     /** База для предпросмотра на «Зерне»: насыпанное на весы, а пока его нет — доза рецепта по умолчанию. */
     fun previewDoseG(defaultDoseG: Double): Double = weightG?.takeIf { it >= MIN_DOSE_G } ?: defaultDoseG
+
+    /** Налитое в часть [part]: до «Старт» весы не оттарированы — ноль; без связи — по последнему весу. */
+    fun pouredIn(part: Int): Double = if (phase == BrewPhase.READY) 0.0 else tare.pouredIn(part, weightG ?: lastWeightG)
+
+    /** Кнопки «Тара» части можно нажать. */
+    val canTarePart: Boolean get() = awaitingTare && !tareBusy && scale.isReady
 
     /** «Далее»: весы готовы и на них хоть что-то есть. */
     val canFixDose: Boolean get() = phase == BrewPhase.BEANS && weightG != null && weightG >= MIN_DOSE_G
@@ -68,7 +91,7 @@ data class BrewUi(
  *
  * [longScope] — для команд, которые должны дойти после закрытия экрана («Завершить» ставит таймер на паузу
  * и сразу закрывает Activity). [beep] — сигнал кнопок управления, [signal] — сигнал хода рецепта
- * (звучать ли — решает настройка «Сигналы шагов»).
+ * (звучать ли — решает настройка «Сигналы шагов»). [nowMs] — часы для остановки пролива, те же, что у репозитория.
  */
 class BrewViewModel(
     private val repository: ScaleRepository,
@@ -77,6 +100,7 @@ class BrewViewModel(
     private val longScope: CoroutineScope,
     private val beep: () -> Unit = {},
     private val signal: (StepSignal) -> Unit = {},
+    private val nowMs: () -> Long = { System.nanoTime() / 1_000_000 },
 ) : ViewModel(scope) {
 
     private val _recipe = MutableStateFlow(recipe)
@@ -94,6 +118,18 @@ class BrewViewModel(
     private val stage = MutableStateFlow(Stage.BEANS)
     private val dose = MutableStateFlow<Double?>(null)
     private val lastWeight = MutableStateFlow(0.0)
+
+    /** Нули частей рецепта и признак «тару части нажали, ждём ноль». */
+    private data class PartTare(val state: TareState = TareState(), val busy: Boolean = false)
+
+    private val partTare = MutableStateFlow(PartTare())
+
+    /** Часть, чью тару весы приняли и ждут первого кадра около нуля; `null` — не ждём. */
+    private var awaitingPartZero: Int? = null
+
+    /** Нажатие «Тара» части, чей ответ ещё ждём: после новой варки прежний ответ не засчитывается. */
+    private var tareAttempt = 0
+
     private var detector: PourDetector? = null
 
     /**
@@ -117,10 +153,22 @@ class BrewViewModel(
     /** Шаги с целью, о наборе которых уже сигналили: при колебаниях веса у цели сигнал не повторяется. */
     private val reachedTargets = mutableSetOf<Int>()
 
+    /** Остановка пролива по весу — когда вода может улечься. */
+    private var still = PourStill()
+
+    /** Шаг воды, чья вода улеглась: отпущен до начала следующего шага воды. */
+    private val settledWater = MutableStateFlow<Int?>(null)
+
+    /** Будильник «вес не рос 1,5 с»: при неизменном весе новых состояний весов нет. */
+    private var settleWake: Job? = null
+
     private val _errors = Channel<Int>(Channel.BUFFERED)
     val errors: Flow<Int> = _errors.receiveAsFlow()
 
-    val ui: StateFlow<BrewUi> = combine(stage, dose, lastWeight, repository.state) { stage, dose, last, s ->
+    val ui: StateFlow<BrewUi> = combine(
+        stage, dose, lastWeight, repository.state, combine(partTare, settledWater, ::Pair),
+    ) { stage, dose, last, s, (tare, settled) ->
+        val seconds = if (stage == Stage.STARTED || stage == Stage.FINISHED) s.timeSeconds else 0
         BrewUi(
             phase = when (stage) {
                 Stage.BEANS -> BrewPhase.BEANS
@@ -133,7 +181,12 @@ class BrewViewModel(
             doseG = dose,
             weightG = s.weightG(),
             lastWeightG = last,
-            seconds = if (stage == Stage.STARTED || stage == Stage.FINISHED) s.timeSeconds else 0,
+            seconds = seconds,
+            tare = tare.state,
+            // Часть ждёт тары, только пока идёт время рецепта; прежний отсчёт общего таймера до сброса не считаем.
+            awaitingTare = stage == Stage.STARTED && freshTimer && !tare.state.isTared(timeline.partAt(seconds)),
+            tareBusy = tare.busy,
+            holdWater = holdsWater(stage, seconds, dose, s.weightG() ?: last, tare.state, settled),
         )
     }.stateIn(viewModelScope, SharingStarted.Eagerly, BrewUi(BrewPhase.BEANS, repository.state.value, null, null, 0.0, 0))
 
@@ -164,6 +217,12 @@ class BrewViewModel(
             }
             Stage.STARTED -> {
                 if (s.timeSeconds == 0) freshTimer = true
+                if (freshTimer) {
+                    // Время ушло в следующую часть — прошлые застывают на весе к началу шага «Тара».
+                    val part = timeline.partAt(s.timeSeconds.coerceAtMost(timeline.total))
+                    partTare.update { it.copy(state = it.state.freezeBefore(part, lastWeight.value)) }
+                }
+                if (weight != null) acceptPartZero(weight)
                 if (freshTimer && s.timerState == TimerState.RUNNING && s.timeSeconds >= timeline.total) {
                     stage.value = Stage.FINISHED
                     launchReporting(viewModelScope) { repository.toggleTimer() }
@@ -172,6 +231,51 @@ class BrewViewModel(
             }
             Stage.FINISHED -> if (freshTimer) checkSignals(timeline.total)
             else -> Unit
+        }
+        settle()
+    }
+
+    /**
+     * Табло держит воду: идёт шаг с крупным временем (или время рецепта вышло), а вода шага воды не отпущена.
+     * Без шага воды (в части нет целей, часть ждёт тары) держать нечего.
+     */
+    private fun holdsWater(stage: Stage, seconds: Int, dose: Double?, weightG: Double, tare: TareState, settled: Int?): Boolean {
+        if (dose == null || !freshTimer) return false
+        when (stage) {
+            Stage.STARTED -> {
+                val step = timeline.stepAt(seconds) ?: return false
+                if (!(recipe.items[step] as RecipeItem.Step).showTime) return false
+            }
+            Stage.FINISHED -> Unit
+            else -> return false
+        }
+        val focus = PourFocus.of(timeline, dose, weightG, seconds.coerceAtMost(timeline.total), tare) ?: return false
+        return focus.itemIndex != settled
+    }
+
+    /**
+     * Вода улеглась — пролив остановился и до рубежа шага воды осталось меньше [PourFocus.SETTLE_LEFT_G]: шаг воды
+     * отпускается до начала следующего. Пока пролив не остановился, ждём будильником: вес может больше не прийти.
+     */
+    private fun settle() {
+        val current = stage.value
+        if (!freshTimer || current != Stage.STARTED && current != Stage.FINISHED) return
+        val dose = dose.value ?: return
+        val now = nowMs()
+        val weight = lastWeight.value
+        still.onWeight(weight, now)
+        val seconds = repository.state.value.timeSeconds.coerceAtMost(timeline.total)
+        val focus = PourFocus.of(timeline, dose, weight, seconds, partTare.value.state)
+        settleWake?.cancel()
+        if (focus == null || focus.itemIndex == settledWater.value) return
+        if (still.isStill(now)) {
+            if (focus.leftG < PourFocus.SETTLE_LEFT_G) settledWater.value = focus.itemIndex
+            return
+        }
+        val at = still.stillAtMs ?: return
+        settleWake = viewModelScope.launch {
+            delay(at - now)
+            settle()
         }
     }
 
@@ -190,7 +294,7 @@ class BrewViewModel(
             signal(StepSignal.STEP)
         }
         val dose = dose.value ?: return
-        val focus = PourFocus.of(timeline, dose, lastWeight.value, seconds) ?: return
+        val focus = PourFocus.of(timeline, dose, lastWeight.value, seconds, partTare.value.state) ?: return
         if (focus.state != TargetState.BELOW && reachedTargets.add(focus.itemIndex)) signal(StepSignal.TARGET)
     }
 
@@ -201,6 +305,12 @@ class BrewViewModel(
         // Первый шаг начинается вместе с проливом — это не «смена шага», сигнал не нужен.
         signalledStep = timeline.stepAt(0)
         reachedTargets.clear()
+        still = PourStill()
+        settleWake?.cancel()
+        settledWater.value = null
+        partTare.value = PartTare()
+        awaitingPartZero = null
+        tareAttempt++
         // Как «Сброс» и «Старт» на вкладке «Весы»: общий таймер мог идти там.
         launchReporting(viewModelScope) {
             repository.resetTimer()
@@ -208,9 +318,48 @@ class BrewViewModel(
         }
     }
 
+    /** Время варки в миллисекундах для идеального уровня на полосе налива; `null` — пролив не начался. */
+    fun brewElapsedMs(): Long? = if (ui.value.started) repository.timerElapsedMs() else null
+
     fun tare() {
         beep()
         launchReporting(viewModelScope) { repository.withSession { tare() } }
+    }
+
+    /**
+     * «Тара» на шаге «Тара»: оттарировать весы, и первый кадр около нуля станет нулём части, где идёт время.
+     * Сами весы без нажатия не тарируются: в начале шага на них ещё может стоять аэропресс.
+     */
+    fun tarePart() {
+        val current = ui.value
+        if (!current.canTarePart) return
+        beep()
+        val part = timeline.partAt(current.seconds)
+        val attempt = ++tareAttempt
+        partTare.update { it.copy(busy = true) }
+        viewModelScope.launch {
+            try {
+                repository.withSession { tare() }
+                if (attempt == tareAttempt) {
+                    awaitingPartZero = part
+                    // Весы уже показывали ноль — одинаковое состояние повторно не придёт, берём его сейчас.
+                    repository.state.value.weightG()?.let(::acceptPartZero)
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                if (attempt == tareAttempt) partTare.update { it.copy(busy = false) }
+                commandErrorRes(e, repository.state.value.isReady)?.let { _errors.trySend(it) }
+            }
+        }
+    }
+
+    /** Первый вес около нуля после тары части — её ноль. */
+    private fun acceptPartZero(weight: Double) {
+        val part = awaitingPartZero ?: return
+        if (abs(weight) >= TARE_ZERO_G) return
+        awaitingPartZero = null
+        partTare.update { PartTare(it.state.tared(part, weight), busy = false) }
     }
 
     /** «Далее»: доза — показание весов в момент нажатия. */

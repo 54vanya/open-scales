@@ -165,6 +165,8 @@ class BrewActivity : OpenScalesActivity() {
                         onStart = viewModel::startOrCancel,
                         onPause = viewModel::togglePause,
                         onStop = leave,
+                        onTarePart = viewModel::tarePart,
+                        elapsedMs = viewModel::brewElapsedMs,
                         triggerOnPress = appSettings.triggerOnPress,
                         slashedZero = appSettings.slashedZero,
                         onTimeDrawn = drawProbe,
