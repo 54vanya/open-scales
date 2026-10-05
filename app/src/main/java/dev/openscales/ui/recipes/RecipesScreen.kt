@@ -43,6 +43,7 @@ import kotlin.math.roundToInt
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import dev.openscales.ui.components.screenContentPadding
 import dev.openscales.R
 import dev.openscales.protocol.WeightUnit
 import dev.openscales.recipe.BuiltInRecipes
@@ -145,12 +146,8 @@ fun RecipesScreen(
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(
-            start = 16.dp, end = 16.dp,
-            top = padding.calculateTopPadding() + 8.dp,
-            // Под кнопкой «Новый рецепт» последний рецепт не прячется.
-            bottom = padding.calculateBottomPadding() + FAB_CLEARANCE,
-        ),
+        // Под кнопкой «Новый рецепт» последний рецепт не прячется.
+        contentPadding = screenContentPadding(padding, top = 8.dp, bottom = FAB_CLEARANCE),
         verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
     ) {
         item(key = "banner") {

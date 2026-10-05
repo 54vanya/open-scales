@@ -19,6 +19,7 @@ import androidx.compose.foundation.Canvas
 import kotlinx.coroutines.delay
 import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -41,6 +42,7 @@ import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.ui.unit.sp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Dialpad
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material.icons.rounded.Info
@@ -123,95 +125,144 @@ fun BeansScreen(
     slashedZero: Boolean = true,
     /** Свой рецепт: кнопка «Изменить» в заголовке; у встроенного — `null`, кнопки нет. */
     onEdit: (() -> Unit)? = null,
+    /** Ручной ввод дозы: зерно уже унесли с весов, а «Далее» не нажали. */
+    onManualDose: () -> Unit = {},
 ) {
     val unit = ui.scale.unit
-    Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        topBar = { BrewTopBar(recipe.title.resolve(), stringResource(R.string.brew_beans_title), onBack, onEdit) },
-        bottomBar = {
-            val tare = rememberPressAction(ui.scale.isReady && triggerOnPress, onTare)
-            Row(
-                modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                FilledTonalButton(
-                    onClick = tare.onClick,
-                    enabled = ui.scale.isReady,
-                    modifier = Modifier.weight(1f).heightIn(min = ButtonDefaults.MediumContainerHeight).then(tare.modifier),
-                ) { Text(stringResource(R.string.tare), style = MaterialTheme.typography.titleMedium) }
-                Button(
-                    onClick = onNext,
-                    enabled = ui.canFixDose,
-                    modifier = Modifier.weight(1f).heightIn(min = ButtonDefaults.MediumContainerHeight),
-                ) { Text(stringResource(R.string.brew_next), style = MaterialTheme.typography.titleMedium) }
-            }
-        },
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            ReconnectBanner(ui.scale)
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.extraLarge,
-                color = MaterialTheme.colorScheme.surfaceContainerHighest,
-            ) {
-                Row(
-                    modifier = Modifier.padding(vertical = 16.dp, horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.Center,
+    // Окно шире своей высоты: кнопки столбцом справа, а не рядом внизу — высоты и так мало.
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val wide = maxWidth > maxHeight
+        Scaffold(
+            snackbarHost = { SnackbarHost(snackbarHostState) },
+            topBar = {
+                BrewTopBar(
+                    recipe.title.resolve(),
+                    stringResource(R.string.brew_beans_title),
+                    onBack,
+                    onEdit,
+                    onManualDose = onManualDose,
+                    manualDoseEnabled = ui.scale.isReady,
+                )
+            },
+            bottomBar = { if (!wide) BeansControls(ui, triggerOnPress, onTare, onNext, vertical = false) },
+        ) { padding ->
+            Row(Modifier.fillMaxSize().padding(padding)) {
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    // Тот же формат, что на вкладке «Весы»; на узком экране с крупным шрифтом число уменьшается.
-                    BasicText(
-                        formatWeight(ui.weightG?.let { ui.scale.weight }, unit),
-                        style = WeightTextStyle.withSlashedZero(slashedZero).copy(color = MaterialTheme.colorScheme.onSurface),
-                        maxLines = 1,
-                        softWrap = false,
-                        autoSize = TextAutoSize.StepBased(minFontSize = 24.sp, maxFontSize = WeightTextStyle.fontSize),
-                        modifier = Modifier.alignByBaseline().weight(1f, fill = false),
-                    )
+                    ReconnectBanner(ui.scale)
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = MaterialTheme.shapes.extraLarge,
+                        color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(vertical = 16.dp, horizontal = 16.dp),
+                            horizontalArrangement = Arrangement.Center,
+                        ) {
+                            // Тот же формат, что на вкладке «Весы»; на узком экране с крупным шрифтом число уменьшается.
+                            BasicText(
+                                formatWeight(ui.weightG?.let { ui.scale.weight }, unit),
+                                style = WeightTextStyle.withSlashedZero(slashedZero).copy(color = MaterialTheme.colorScheme.onSurface),
+                                maxLines = 1,
+                                softWrap = false,
+                                autoSize = TextAutoSize.StepBased(minFontSize = 24.sp, maxFontSize = WeightTextStyle.fontSize),
+                                modifier = Modifier.alignByBaseline().weight(1f, fill = false),
+                            )
+                            Text(
+                                stringResource(unit.symbolRes()),
+                                style = UnitTextStyle,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.alignByBaseline().padding(start = 8.dp),
+                            )
+                        }
+                    }
+                    // Цели и вода — от насыпанного, а пока на весах пусто или весов нет — от дозы рецепта.
+                    val base = ui.previewDoseG(recipe.defaultDoseG.toDouble())
+                    // Рецепт как есть — от весов не зависит; ниже, если на весах уже есть зерно, — пересчёт на него.
+                    val defaultDose = recipe.defaultDoseG.toDouble()
+                    // Одна строка, чтобы экран не дёргался: пока на весах есть зерно — пересчёт на него, иначе рецепт как есть.
+                    // Доза рецепта и вода от насыпанного в одной строке не смешиваются.
                     Text(
-                        stringResource(unit.symbolRes()),
-                        style = UnitTextStyle,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.alignByBaseline().padding(start = 8.dp),
+                        if (ui.weightG != null && ui.weightG >= BrewUi.MIN_DOSE_G) {
+                            stringResource(
+                                R.string.brew_scaled_water,
+                                stepWeightWithUnit(ui.weightG, unit),
+                                stepWeightWithUnit(recipe.totalWaterG(ui.weightG), unit),
+                            )
+                        } else {
+                            stringResource(
+                                R.string.brew_dose_water,
+                                stepWeightWithUnit(defaultDose, unit),
+                                stepWeightWithUnit(recipe.totalWaterG(defaultDose), unit),
+                            )
+                        },
+                        style = MaterialTheme.typography.titleMedium,
                     )
+                    recipe.description?.let {
+                        Text(it.resolve(), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    HorizontalDivider()
+                    RecipePreview(recipe, base, unit)
                 }
+                if (wide) BeansControls(ui, triggerOnPress, onTare, onNext, vertical = true)
             }
-            // Цели и вода — от насыпанного, а пока на весах пусто или весов нет — от дозы рецепта.
-            val base = ui.previewDoseG(recipe.defaultDoseG.toDouble())
-            // Рецепт как есть — от весов не зависит; ниже, если на весах уже есть зерно, — пересчёт на него.
-            val defaultDose = recipe.defaultDoseG.toDouble()
-            // Одна строка, чтобы экран не дёргался: пока на весах есть зерно — пересчёт на него, иначе рецепт как есть.
-            // Доза рецепта и вода от насыпанного в одной строке не смешиваются.
-            Text(
-                if (ui.weightG != null && ui.weightG >= BrewUi.MIN_DOSE_G) {
-                    stringResource(
-                        R.string.brew_scaled_water,
-                        stepWeightWithUnit(ui.weightG, unit),
-                        stepWeightWithUnit(recipe.totalWaterG(ui.weightG), unit),
-                    )
-                } else {
-                    stringResource(
-                        R.string.brew_dose_water,
-                        stepWeightWithUnit(defaultDose, unit),
-                        stepWeightWithUnit(recipe.totalWaterG(defaultDose), unit),
-                    )
-                },
-                style = MaterialTheme.typography.titleMedium,
-            )
-            recipe.description?.let {
-                Text(it.resolve(), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            HorizontalDivider()
-            RecipePreview(recipe, base, unit)
         }
     }
 }
+
+/** Кнопки «Зерна»: «Тара» и «Далее» — рядом внизу или, в широком окне ([vertical]), столбцом у правого края. */
+@Composable
+private fun BeansControls(ui: BrewUi, triggerOnPress: Boolean, onTare: () -> Unit, onNext: () -> Unit, vertical: Boolean) {
+    val tare = rememberPressAction(ui.scale.isReady && triggerOnPress, onTare)
+    val height = Modifier.heightIn(min = ButtonDefaults.MediumContainerHeight)
+    val buttons = @Composable { slot: Modifier ->
+        FilledTonalButton(
+            onClick = tare.onClick,
+            enabled = ui.scale.isReady,
+            modifier = slot.then(height).then(tare.modifier),
+        ) { Text(stringResource(R.string.tare), style = MaterialTheme.typography.titleMedium) }
+        Button(
+            onClick = onNext,
+            enabled = ui.canFixDose,
+            modifier = slot.then(height),
+        ) { Text(stringResource(R.string.brew_next), style = MaterialTheme.typography.titleMedium) }
+    }
+    if (vertical) {
+        SideControls { buttons(Modifier.fillMaxWidth()) }
+    } else {
+        Row(
+            modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) { buttons(Modifier.weight(1f)) }
+    }
+}
+
+/**
+ * Столбец кнопок у правого края широкого окна: на всю высоту под заголовком, кнопки по центру; если кнопки не
+ * помещаются по высоте (крупный шрифт) — прокручивается. Вырез экрана и системные панели уже учтены отступами
+ * `Scaffold`, внутри которого стоит столбец.
+ */
+@Composable
+private fun SideControls(content: @Composable ColumnScope.() -> Unit) {
+    Column(
+        modifier = Modifier
+            .width(SIDE_CONTROLS_WIDTH)
+            .fillMaxHeight()
+            .verticalScroll(rememberScrollState())
+            .padding(start = 8.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
+        content = content,
+    )
+}
+
+/** Ширина столбца кнопок: «Лейте, когда готовы» помещается при обычном шрифте. */
+private val SIDE_CONTROLS_WIDTH = 200.dp
 
 /**
  * Компактный предпросмотр рецепта на «Зерне»: одна строка на шаг — время начала, название, цель от [baseG];
@@ -319,73 +370,80 @@ fun StepsScreen(
         PourBoard(recipe, timeline, ui, dose, mode, slashedZero, triggerOnPress, onTarePart, elapsedMs, modifier)
     }
 
-    Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        topBar = {
-            BrewTopBar(
-                recipe.title.resolve(),
-                stringResource(R.string.brew_dose, stepWeightWithUnit(dose, unit)),
-                onBack,
-                onSwap = onSwap,
-            )
-        },
-        bottomBar = { StepsControls(ui, triggerOnPress, onTare, onStart, onPause, onStop, onTarePart, onTimeDrawn) },
-    ) { padding ->
-        val list = @Composable { modifier: Modifier ->
-            LazyColumn(
-                state = listState,
-                modifier = modifier,
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                // Описание рецепта (помол, температура) — как на «Зерне», чтобы не держать его в голове во время варки.
-                recipe.description?.let { description ->
-                    item(key = "description") {
-                        Text(
-                            description.resolve(),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp),
-                        )
+    // Окно шире своей высоты: табло слева на всю высоту, список по центру, кнопки столбцом справа.
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val wide = maxWidth > maxHeight
+        val controls = @Composable { vertical: Boolean ->
+            StepsControls(ui, triggerOnPress, onTare, onStart, onPause, onStop, onTarePart, onTimeDrawn, vertical)
+        }
+        Scaffold(
+            snackbarHost = { SnackbarHost(snackbarHostState) },
+            topBar = {
+                BrewTopBar(
+                    recipe.title.resolve(),
+                    stringResource(R.string.brew_dose, stepWeightWithUnit(dose, unit)),
+                    onBack,
+                    onSwap = onSwap,
+                )
+            },
+            bottomBar = { if (!wide) controls(false) },
+        ) { padding ->
+            val list = @Composable { modifier: Modifier ->
+                LazyColumn(
+                    state = listState,
+                    modifier = modifier,
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    // Описание рецепта (помол, температура) — как на «Зерне», чтобы не держать его в голове во время варки.
+                    recipe.description?.let { description ->
+                        item(key = "description") {
+                            Text(
+                                description.resolve(),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp),
+                            )
+                        }
                     }
-                }
-                itemsIndexed(recipe.items) { index, item ->
-                    // Пройденные шаги гаснут плавно; числа при этом не анимируются.
-                    val alpha by animateFloatAsState(if (timeline.isFaded(index, seconds)) FADED_ALPHA else 1f, label = "fade")
-                    val faded = Modifier.alpha(alpha)
-                    when (item) {
-                        is RecipeItem.Step -> StepCard(
-                            title = item.title.resolve(),
-                            note = item.note?.resolve(),
-                            range = formatTime(timeline.startOf(index)) + "–" + formatTime(timeline.endOf(index)),
-                            remaining = if (index == current && seconds != null) timeline.remainingIn(index, seconds) else null,
-                            water = water[index],
-                            unit = unit,
-                            modifier = faded,
-                            isTare = item.tare,
-                        )
-                        is RecipeItem.Hint -> HintRow(item.text.resolve(), faded)
+                    itemsIndexed(recipe.items) { index, item ->
+                        // Пройденные шаги гаснут плавно; числа при этом не анимируются.
+                        val alpha by animateFloatAsState(if (timeline.isFaded(index, seconds)) FADED_ALPHA else 1f, label = "fade")
+                        val faded = Modifier.alpha(alpha)
+                        when (item) {
+                            is RecipeItem.Step -> StepCard(
+                                title = item.title.resolve(),
+                                note = item.note?.resolve(),
+                                range = formatTime(timeline.startOf(index)) + "–" + formatTime(timeline.endOf(index)),
+                                remaining = if (index == current && seconds != null) timeline.remainingIn(index, seconds) else null,
+                                water = water[index],
+                                unit = unit,
+                                modifier = faded,
+                                isTare = item.tare,
+                            )
+                            is RecipeItem.Hint -> HintRow(item.text.resolve(), faded)
+                        }
                     }
                 }
             }
-        }
-        BoxWithConstraints(Modifier.fillMaxSize().padding(padding)) {
-            if (maxWidth > maxHeight) {
-                // Окно шире своей высоты: табло слева на всю высоту, список справа.
-                Row(Modifier.fillMaxSize()) {
-                    Column(Modifier.weight(1f).fillMaxHeight().padding(start = 16.dp, top = 8.dp, bottom = 8.dp)) {
-                        ReconnectBanner(ui.scale)
-                        board(Modifier.fillMaxWidth().weight(1f))
+            Box(Modifier.fillMaxSize().padding(padding)) {
+                if (wide) {
+                    Row(Modifier.fillMaxSize()) {
+                        Column(Modifier.weight(1f).fillMaxHeight().padding(start = 16.dp, top = 8.dp, bottom = 8.dp)) {
+                            ReconnectBanner(ui.scale)
+                            board(Modifier.fillMaxWidth().weight(1f))
+                        }
+                        list(Modifier.weight(1f).fillMaxHeight())
+                        controls(true)
                     }
-                    list(Modifier.weight(1f).fillMaxHeight())
-                }
-            } else {
-                Column(Modifier.fillMaxSize()) {
-                    Column(Modifier.padding(horizontal = 16.dp)) {
-                        ReconnectBanner(ui.scale)
-                        board(Modifier.fillMaxWidth())
+                } else {
+                    Column(Modifier.fillMaxSize()) {
+                        Column(Modifier.padding(horizontal = 16.dp)) {
+                            ReconnectBanner(ui.scale)
+                            board(Modifier.fillMaxWidth())
+                        }
+                        list(Modifier.weight(1f))
                     }
-                    list(Modifier.weight(1f))
                 }
             }
         }
@@ -480,15 +538,20 @@ private fun PourBoard(
                     )
                 }
                 if (ui.phase == BrewPhase.FINISHED && !ui.holdWater) {
-                    // Время рецепта вышло и вода улеглась: итог варки — вес на весах сейчас и общее время.
+                    // Время рецепта вышло и вода улеглась: итог варки — вес на весах сейчас, общее время и цель рецепта.
                     BigReading(
                         text = formatReadingWeight(weightG, unit),
                         unitSymbol = stringResource(unit.symbolRes()),
                         color = colors.onSurface,
                         slashedZero = slashedZero,
                     )
-                    BoardCaption(stringResource(R.string.brew_on_scale))
-                    BoardCaption(stringResource(R.string.brew_total_time, formatTime(ui.seconds)))
+                    BoardCaption(stringResource(R.string.brew_on_scale_time, formatTime(ui.seconds)))
+                    // Попал ли в рецепт: цель последней части. Без цели строка пустая — высота табло та же.
+                    BoardCaption(
+                        recipe.finalTargetG(doseG)
+                            ?.let { stringResource(R.string.brew_of_recipe, stepWeightWithUnit(it, unit)) }
+                            .orEmpty(),
+                    )
                 } else if (ui.awaitingTare) {
                     // Часть ждёт тары: вместо воды — крупная кнопка. Весы тарирует только нажатие.
                     val part = timeline.partAt(seconds)
@@ -686,6 +749,9 @@ private fun BrewTopBar(
     onBack: () -> Unit,
     onEdit: (() -> Unit)? = null,
     onSwap: (() -> Unit)? = null,
+    /** Ручной ввод дозы — только на «Зерне»; активен, только пока весы готовы. */
+    onManualDose: (() -> Unit)? = null,
+    manualDoseEnabled: Boolean = true,
 ) {
     TopAppBar(
         title = { Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
@@ -694,6 +760,11 @@ private fun BrewTopBar(
             IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.back)) }
         },
         actions = {
+            if (onManualDose != null) {
+                IconButton(onClick = onManualDose, enabled = manualDoseEnabled) {
+                    Icon(Icons.Rounded.Dialpad, stringResource(R.string.brew_manual_dose))
+                }
+            }
             if (onSwap != null) {
                 IconButton(onClick = onSwap) { Icon(Icons.Rounded.SwapHoriz, stringResource(R.string.brew_swap_title)) }
             }
@@ -718,6 +789,8 @@ private fun StepsControls(
     onStop: () -> Unit,
     onTarePart: () -> Unit,
     onTimeDrawn: ((Int) -> Unit)? = null,
+    /** Широкое окно: кнопки столбцом у правого края, вес и время — под ними. */
+    vertical: Boolean = false,
 ) {
     val tarePart = rememberPressAction(ui.canTarePart && triggerOnPress, onTarePart)
     val tareEnabled = ui.scale.isReady && ui.phase == BrewPhase.READY
@@ -739,65 +812,87 @@ private fun StepsControls(
         )
     }
 
-    Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (!ui.started) {
+    // Кнопки одни и те же в обеих раскладках: в ряду делят ширину по весам, в столбце — на всю его ширину.
+    val buttons = @Composable { slot: (Float) -> Modifier ->
+        if (!ui.started) {
+            FilledTonalButton(
+                onClick = tare.onClick,
+                enabled = tareEnabled,
+                modifier = height.then(slot(1f)).then(tare.modifier),
+            ) { label(stringResource(R.string.tare)) }
+            Button(
+                onClick = start.onClick,
+                enabled = startEnabled,
+                contentPadding = PaddingValues(horizontal = 12.dp),
+                modifier = height.then(slot(1.3f)).then(start.modifier),
+            ) { label(stringResource(if (ui.phase == BrewPhase.ARMED) R.string.brew_waiting else R.string.start)) }
+        } else {
+            if (ui.awaitingTare) {
+                // То же, что кнопка на табло: пока часть рецепта ждёт тары.
                 FilledTonalButton(
-                    onClick = tare.onClick,
-                    enabled = tareEnabled,
-                    modifier = height.weight(1f).then(tare.modifier),
+                    onClick = tarePart.onClick,
+                    enabled = ui.canTarePart,
+                    modifier = height.then(slot(1f)).then(tarePart.modifier),
                 ) { label(stringResource(R.string.tare)) }
-                Button(
-                    onClick = start.onClick,
-                    enabled = startEnabled,
-                    contentPadding = PaddingValues(horizontal = 12.dp),
-                    modifier = height.weight(1.3f).then(start.modifier),
-                ) { label(stringResource(if (ui.phase == BrewPhase.ARMED) R.string.brew_waiting else R.string.start)) }
-            } else {
-                if (ui.awaitingTare) {
-                    // То же, что кнопка на табло: пока часть рецепта ждёт тары.
-                    FilledTonalButton(
-                        onClick = tarePart.onClick,
-                        enabled = ui.canTarePart,
-                        modifier = height.weight(1f).then(tarePart.modifier),
-                    ) { label(stringResource(R.string.tare)) }
-                }
-                Button(
-                    onClick = pause.onClick,
-                    enabled = pauseEnabled,
-                    modifier = height.weight(1.3f).then(pause.modifier),
-                ) { label(stringResource(if (ui.phase == BrewPhase.PAUSED) R.string.brew_resume else R.string.pause)) }
             }
-            OutlinedButton(onClick = onStop, modifier = height.weight(1f)) { label(stringResource(R.string.brew_stop)) }
+            Button(
+                onClick = pause.onClick,
+                enabled = pauseEnabled,
+                modifier = height.then(slot(1.3f)).then(pause.modifier),
+            ) { label(stringResource(if (ui.phase == BrewPhase.PAUSED) R.string.brew_resume else R.string.pause)) }
         }
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(top = 8.dp, start = 4.dp, end = 4.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            val small = MaterialTheme.typography.bodyMedium
-            val color = MaterialTheme.colorScheme.onSurfaceVariant
-            Text(
-                stringResource(
-                    R.string.value_with_unit,
-                    formatWeight(ui.weightG?.let { ui.scale.weight }, ui.scale.unit),
-                    stringResource(ui.scale.unit.symbolRes()),
-                ),
-                style = small, color = color,
-            )
-            val shown = ui.seconds
-            Text(
-                formatTime(shown),
-                style = small,
-                color = color,
-                modifier = if (onTimeDrawn == null) {
-                    Modifier
-                } else {
-                    Modifier.drawWithContent {
-                        drawContent()
-                        onTimeDrawn(shown)
-                    }
-                },
-            )
+        OutlinedButton(onClick = onStop, modifier = height.then(slot(1f))) { label(stringResource(R.string.brew_stop)) }
+    }
+    val small = MaterialTheme.typography.bodyMedium
+    val color = MaterialTheme.colorScheme.onSurfaceVariant
+    val weight = @Composable {
+        Text(
+            stringResource(
+                R.string.value_with_unit,
+                formatWeight(ui.weightG?.let { ui.scale.weight }, ui.scale.unit),
+                stringResource(ui.scale.unit.symbolRes()),
+            ),
+            style = small, color = color,
+        )
+    }
+    val time = @Composable {
+        val shown = ui.seconds
+        Text(
+            formatTime(shown),
+            style = small,
+            color = color,
+            modifier = if (onTimeDrawn == null) {
+                Modifier
+            } else {
+                Modifier.drawWithContent {
+                    drawContent()
+                    onTimeDrawn(shown)
+                }
+            },
+        )
+    }
+
+    if (vertical) {
+        SideControls {
+            buttons { Modifier.fillMaxWidth() }
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                weight()
+                time()
+            }
+        }
+    } else {
+        Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { buttons { Modifier.weight(it) } }
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp, start = 4.dp, end = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                weight()
+                time()
+            }
         }
     }
 }

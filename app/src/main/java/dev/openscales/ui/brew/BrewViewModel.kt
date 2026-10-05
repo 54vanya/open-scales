@@ -3,6 +3,8 @@ package dev.openscales.ui.brew
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.openscales.protocol.TimerState
+import dev.openscales.recipe.HeldWeight
+import dev.openscales.recipe.ManualDose
 import dev.openscales.recipe.PourDetector
 import dev.openscales.recipe.PourFocus
 import dev.openscales.recipe.PourStill
@@ -119,6 +121,9 @@ class BrewViewModel(
     private val dose = MutableStateFlow<Double?>(null)
     private val lastWeight = MutableStateFlow(0.0)
 
+    /** Устоявшийся вес на «Зерне» — подстановка в ручной ввод дозы, если зерно уже унесли с весов. */
+    private val heldWeight = HeldWeight()
+
     /** Нули частей рецепта и признак «тару части нажали, ждём ноль». */
     private data class PartTare(val state: TareState = TareState(), val busy: Boolean = false)
 
@@ -209,6 +214,7 @@ class BrewViewModel(
         val weight = s.weightG()
         if (weight != null) lastWeight.value = weight
         when (stage.value) {
+            Stage.BEANS -> if (weight != null) heldWeight.onWeight(weight, nowMs())
             Stage.ARMED -> when {
                 weight == null -> Unit
                 awaitingZero -> acceptZero(weight)
@@ -367,6 +373,17 @@ class BrewViewModel(
         val current = ui.value
         if (!current.canFixDose) return
         dose.value = current.weightG
+        stage.value = Stage.READY
+    }
+
+    /** Подстановка в ручной ввод дозы: последний устоявшийся вес на «Зерне», а если его не было — доза рецепта. */
+    fun manualDosePrefillG(): Double = heldWeight.held(nowMs()) ?: recipe.defaultDoseG.toDouble()
+
+    /** Ручной ввод: зерно уже унесли с весов — доза введена числом, дальше как после «Далее». */
+    fun fixManualDose(grams: Double) {
+        val current = ui.value
+        if (current.phase != BrewPhase.BEANS || !current.scale.isReady || !ManualDose.inRange(grams)) return
+        dose.value = grams
         stage.value = Stage.READY
     }
 

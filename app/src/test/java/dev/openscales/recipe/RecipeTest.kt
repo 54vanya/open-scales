@@ -62,6 +62,15 @@ class RecipeTest {
     }
 
     @Test
+    fun `final target is the last target of the last part`() {
+        assertEquals(250.0, hoffman.finalTargetG(15.0)!!, 1e-9)
+        assertEquals(300.0, hoffman.finalTargetG(18.0)!!, 1e-9)
+        // После «Тары» весы считают от нуля части: цель — её рубеж, а не вся вода рецепта (150).
+        assertEquals(50.0, parted.finalTargetG(15.0)!!, 1e-9)
+        assertNull(Recipe("x", Text.Plain("x"), 15, null, listOf(step(100), step(tare = true), step())).finalTargetG(15.0))
+    }
+
+    @Test
     fun `part by time`() {
         val t = RecipeTimeline(parted)
         assertEquals(0, t.partAt(null))

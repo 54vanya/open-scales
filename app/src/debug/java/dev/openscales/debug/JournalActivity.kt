@@ -1,12 +1,12 @@
 package dev.openscales.debug
 
+import dev.openscales.ui.components.screenContentPadding
 import dev.openscales.ui.OpenScalesActivity
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -82,10 +82,7 @@ class JournalActivity : OpenScalesActivity() {
                     LazyColumn(
                         state = listState,
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(
-                            start = 12.dp, end = 12.dp,
-                            top = padding.calculateTopPadding(), bottom = padding.calculateBottomPadding(),
-                        ),
+                        contentPadding = screenContentPadding(padding, horizontal = 12.dp),
                     ) {
                         items(entries) { e ->
                             Text(

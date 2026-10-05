@@ -15,11 +15,13 @@ import dev.openscales.ui.brew.BeansScreen
 import dev.openscales.ui.brew.BrewPhase
 import dev.openscales.ui.brew.BrewUi
 import dev.openscales.ui.brew.LeaveRecipeDialog
+import dev.openscales.ui.brew.ManualDoseDialog
 import dev.openscales.ui.brew.RecipePickerDialog
 import dev.openscales.ui.brew.StepsScreen
 import org.junit.Test
+import org.robolectric.annotation.Config
 
-/** Экран варки: «Зерно», все состояния табло на «Шагах», окна выхода и смены рецепта. */
+/** Экран варки: «Зерно», все состояния табло на «Шагах», окна выхода, смены рецепта и ручной дозы. */
 class BrewScreenshotTest : ScreenshotTest() {
 
     private fun ui(phase: BrewPhase, weight: Float, seconds: Int = 0, dose: Double? = 15.0) = BrewUi(
@@ -116,9 +118,48 @@ class BrewScreenshotTest : ScreenshotTest() {
         steps("brew_finished_holding", onePour, ui(BrewPhase.FINISHED, 170f, seconds = 105).copy(holdWater = true))
     }
 
+    // region Альбомная ориентация: кнопки столбцом у правого края
+
+    @Test
+    @Config(qualifiers = LANDSCAPE)
+    fun beansLandscape() = snapshot("brew_beans_landscape") {
+        BeansScreen(
+            recipe = BuiltInRecipes.hoffmannV60,
+            ui = ui(BrewPhase.BEANS, weight = 18f, dose = null),
+            snackbarHostState = SnackbarHostState(),
+            onBack = {}, onTare = {}, onNext = {},
+        )
+    }
+
+    @Test
+    @Config(qualifiers = LANDSCAPE)
+    fun stepsLandscapeBeforeStart() =
+        steps("brew_steps_landscape", BuiltInRecipes.hoffmannV60, ui(BrewPhase.READY, 315f), swap = true)
+
+    @Test
+    @Config(qualifiers = LANDSCAPE)
+    fun stepsLandscapePouring() =
+        steps("brew_steps_landscape_pouring", BuiltInRecipes.hoffmannV60, ui(BrewPhase.RUNNING, 60f, seconds = 60))
+
+    // endregion
+
     @Test
     fun leaveDialog() = screen("brew_leave_dialog") {
         LeaveRecipeDialog(onLeave = {}, onReweigh = {}, onStay = {})
+    }
+
+    /** Зерно уже унесли с весов: в поле с фокусом устоявшийся вес, под ним вода от него. */
+    @Test
+    @Config(qualifiers = DIALOG_WITH_FIELD)
+    fun manualDose() = screen("brew_manual_dose", focusedField = true) {
+        ManualDoseDialog(
+            recipe = BuiltInRecipes.hoffmannV60,
+            unit = dev.openscales.protocol.WeightUnit.GRAM,
+            initialG = 18.2,
+            scaleReady = true,
+            onConfirm = {},
+            onDismiss = {},
+        )
     }
 
     @Test

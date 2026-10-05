@@ -37,15 +37,19 @@ abstract class ScreenshotTest {
 
     /**
      * Снимок всего экрана вместе с окнами поверх (диалоги, меню) в `<name>.png`. [act] — действия перед снимком
-     * (открыть меню).
+     * (открыть меню). [focusedField] — в окне поле с фокусом: мигающий курсор не даёт Compose успокоиться, поэтому
+     * часы стоят и прокручиваются вручную до видимого курсора.
      */
     protected fun screen(
         name: String,
         dark: Boolean = false,
+        focusedField: Boolean = false,
         act: ComposeContentTestRule.() -> Unit = {},
         content: @Composable () -> Unit,
     ) {
+        if (focusedField) compose.mainClock.autoAdvance = false
         compose.setContent { OpenScalesTheme(darkTheme = dark, dynamicColor = false, content = content) }
+        if (focusedField) compose.mainClock.advanceTimeBy(CARET_VISIBLE_MS)
         compose.waitForIdle()
         compose.act()
         compose.waitForIdle()
@@ -56,5 +60,17 @@ abstract class ScreenshotTest {
         const val DIR = "src/test/screenshots"
         const val PHONE = "ru-w411dp-h914dp-xxhdpi"
         const val NARROW = "ru-w320dp-h780dp-xxhdpi"
+
+        /** Тот же телефон в альбомной ориентации: окно шире своей высоты. */
+        const val LANDSCAPE = "ru-w914dp-h411dp-land-xxhdpi"
+
+        /**
+         * Окно с текстовым полем: с размером экрана в qualifiers Compose в таком окне не успокаивается
+         * (https://github.com/robolectric/robolectric/issues/8460), поэтому экран — по умолчанию, 320×470 dp.
+         */
+        const val DIALOG_WITH_FIELD = "ru-xxhdpi"
+
+        /** Курсор поля только что получил фокус и виден (мигает раз в 500 мс). */
+        private const val CARET_VISIBLE_MS = 200L
     }
 }

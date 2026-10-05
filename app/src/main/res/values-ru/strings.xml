@@ -174,10 +174,14 @@
     <string name="brew_done">Готово</string>
     <string name="brew_until_step">до «%1$s»</string>
     <string name="brew_until_end">до конца</string>
-    <string name="brew_on_scale">на весах</string>
-    <string name="brew_total_time">время варки %1$s</string>
+    <string name="brew_on_scale_time">на весах · время варки %1$s</string>
+    <string name="brew_of_recipe">из %1$s по рецепту</string>
     <string name="brew_swap_title">Сменить рецепт</string>
     <string name="brew_swap_current">Текущий рецепт</string>
+    <string name="brew_manual_dose">Ввести дозу вручную</string>
+    <string name="brew_manual_dose_title">Доза кофе</string>
+    <string name="brew_manual_dose_water">%1$s воды</string>
+    <string name="brew_manual_dose_range">От %1$s до %2$s</string>
     <string name="brew_leave_title">Выйти из рецепта?</string>
     <string name="brew_leave_text">Взвешенная доза не сохранится.</string>
     <string name="brew_leave">Выйти</string>

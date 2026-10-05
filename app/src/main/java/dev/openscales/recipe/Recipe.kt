@@ -94,6 +94,12 @@ data class Recipe(
         return parts
     }
 
+    /**
+     * Цель итога варки при дозе [doseG]: последний рубеж последней части — вес на весах в конце считается от её
+     * тары. `null` — в последней части рубежей нет.
+     */
+    fun finalTargetG(doseG: Double): Double? = targetsByPart(doseG).lastOrNull()?.lastOrNull()?.second
+
     /** Сколько воды всего при дозе [doseG]: сумма последних рубежей всех частей. */
     fun totalWaterG(doseG: Double): Double = targetsByPart(doseG).sumOf { it.lastOrNull()?.second ?: 0.0 }
 }

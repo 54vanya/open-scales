@@ -80,6 +80,8 @@ class BrewActivity : OpenScalesActivity() {
                 val userRecipes by app.recipeStore.recipes.collectAsStateWithLifecycle()
                 var showPicker by rememberSaveable { mutableStateOf(false) }
                 var confirmLeave by rememberSaveable { mutableStateOf(false) }
+                // Ручной ввод дозы открыт с этой подстановкой; `null` — закрыт.
+                var manualDoseG by rememberSaveable { mutableStateOf<Double?>(null) }
                 // Сменить рецепт — на «Шагах» до «Старт», когда доза уже зафиксирована. С «Зерна» проще выйти.
                 val swap: (() -> Unit)? = if (ui.phase == BrewPhase.READY) ({ showPicker = true }) else null
                 // Свой рецепт поправили в редакторе, открытом отсюда, — на «Зерне» показываем новую версию.
@@ -147,6 +149,7 @@ class BrewActivity : OpenScalesActivity() {
                         },
                         triggerOnPress = appSettings.triggerOnPress,
                         slashedZero = appSettings.slashedZero,
+                        onManualDose = { manualDoseG = viewModel.manualDosePrefillG() },
                     )
                 } else {
                     val beforeStart = ui.phase == BrewPhase.READY
@@ -185,6 +188,21 @@ class BrewActivity : OpenScalesActivity() {
                             viewModel.updateRecipe(picked)
                         },
                         onDismiss = { showPicker = false },
+                    )
+                }
+
+                val prefill = manualDoseG
+                if (prefill != null && ui.phase == BrewPhase.BEANS) {
+                    ManualDoseDialog(
+                        recipe = recipe,
+                        unit = ui.scale.unit,
+                        initialG = prefill,
+                        scaleReady = ui.scale.isReady,
+                        onConfirm = { grams ->
+                            manualDoseG = null
+                            viewModel.fixManualDose(grams)
+                        },
+                        onDismiss = { manualDoseG = null },
                     )
                 }
 

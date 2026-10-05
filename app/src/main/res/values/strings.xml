@@ -178,10 +178,14 @@
     <string name="brew_done">Done</string>
     <string name="brew_until_step">until “%1$s”</string>
     <string name="brew_until_end">until the end</string>
-    <string name="brew_on_scale">on the scale</string>
-    <string name="brew_total_time">brew time %1$s</string>
+    <string name="brew_on_scale_time">on the scale · brew time %1$s</string>
+    <string name="brew_of_recipe">of %1$s by the recipe</string>
     <string name="brew_swap_title">Change recipe</string>
     <string name="brew_swap_current">Current recipe</string>
+    <string name="brew_manual_dose">Enter the dose manually</string>
+    <string name="brew_manual_dose_title">Coffee dose</string>
+    <string name="brew_manual_dose_water">%1$s water</string>
+    <string name="brew_manual_dose_range">From %1$s to %2$s</string>
     <string name="brew_leave_title">Leave this recipe?</string>
     <string name="brew_leave_text">The weighed dose won’t be kept.</string>
     <string name="brew_leave">Leave</string>

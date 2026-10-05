@@ -40,6 +40,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.foundation.layout.Row
+import dev.openscales.ui.components.screenContentPadding
 import dev.openscales.R
 import dev.openscales.ble.DiscoveredScale
 import dev.openscales.data.SavedDevice
@@ -187,12 +188,7 @@ private fun DeviceList(
     val found = scan.devices.filterNot { it.address == saved?.address }
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(
-            start = 16.dp,
-            end = 16.dp,
-            top = padding.calculateTopPadding(),
-            bottom = padding.calculateBottomPadding() + 96.dp,
-        ),
+        contentPadding = screenContentPadding(padding, bottom = 96.dp),
         verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
     ) {
         if (virtual != null) item { virtual() }

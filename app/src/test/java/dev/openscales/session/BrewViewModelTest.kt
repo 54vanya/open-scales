@@ -569,6 +569,63 @@ class BrewViewModelTest {
 
     // endregion
 
+    // region Ручная доза
+
+    @Test
+    fun `beans already taken away - manual dose prefilled with the weighed beans`() = runTest {
+        val env = Env(this)
+        env.connect(this)
+        weigh(env, 18.2)
+        settle(2_000)
+        // Чашку снимают: промежуточный кадр и почти ноль.
+        weigh(env, 9.6)
+        weigh(env, 0.1)
+        settle(3_000)
+        assertFalse(env.brew.ui.value.canFixDose)
+        val prefill = env.brew.manualDosePrefillG()
+        assertEquals(18.2, prefill, 1e-3)
+
+        env.brew.fixManualDose(prefill)
+        runCurrent()
+        val ui = env.brew.ui.value
+        assertEquals(BrewPhase.READY, ui.phase)
+        assertEquals(listOf(36, 182, 303), env.brew.recipe.targetsG(ui.doseG!!).map { it.roundToInt() })
+    }
+
+    @Test
+    fun `nothing weighed - manual dose prefilled with the recipe dose`() = runTest {
+        val env = Env(this)
+        env.connect(this)
+        weigh(env, 0.0)
+        settle(5_000)
+        assertEquals(15.0, env.brew.manualDosePrefillG(), 1e-9)
+    }
+
+    @Test
+    fun `manual dose out of range is refused`() = runTest {
+        val env = Env(this)
+        env.connect(this)
+        env.brew.fixManualDose(0.9)
+        env.brew.fixManualDose(100.1)
+        runCurrent()
+        assertEquals(BrewPhase.BEANS, env.brew.ui.value.phase)
+        assertNull(env.brew.ui.value.doseG)
+        env.brew.fixManualDose(100.0)
+        runCurrent()
+        assertEquals(BrewPhase.READY, env.brew.ui.value.phase)
+    }
+
+    @Test
+    fun `manual dose needs a ready scale`() = runTest {
+        val env = Env(this)
+        env.brew.fixManualDose(18.0)
+        runCurrent()
+        assertEquals(BrewPhase.BEANS, env.brew.ui.value.phase)
+        assertNull(env.brew.ui.value.doseG)
+    }
+
+    // endregion
+
     private companion object {
         /** Сколько ждать ответа весов на тару: команда идёт через очередь сессии. */
         const val TARE_ACK_MS = 500L

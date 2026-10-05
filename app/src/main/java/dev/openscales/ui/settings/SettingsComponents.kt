@@ -15,6 +15,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SegmentedListItem
@@ -65,7 +66,8 @@ internal fun SettingRow(
     trailing: (@Composable () -> Unit)? = null,
     onClick: (() -> Unit)? = null,
 ) {
-    val tint = if (destructive) MaterialTheme.colorScheme.error else Color.Unspecified
+    // Не `Color.Unspecified`: без окраски значок рисуется своим чёрным и в тёмной теме не виден.
+    val tint = if (destructive) MaterialTheme.colorScheme.error else LocalContentColor.current
     val shapes = ListItemDefaults.segmentedShapes(index, count)
     val leading: @Composable () -> Unit = { Icon(icon, null, tint = tint) }
     val supporting: (@Composable () -> Unit)? = value?.let { { Text(it) } }
