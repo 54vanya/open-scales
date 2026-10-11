@@ -52,7 +52,7 @@ class MessageDecoderTest {
         val frame = FrameCodec.split(bytes(0xA5, 0x5A, 0x02, 0x05, 0x00, 0x02, 0x03, 0x59, 0x00, 0x00)).single()
         val msg = decode(frame) as ScaleMessage.Battery
         assertEquals(89, msg.percent)
-        assertEquals(3, msg.status)
+        assertEquals(3, msg.bars)
     }
 
     @Test

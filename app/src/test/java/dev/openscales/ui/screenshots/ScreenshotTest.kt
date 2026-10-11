@@ -28,11 +28,11 @@ abstract class ScreenshotTest {
     @get:Rule
     val compose = createComposeRule()
 
-    /** Снимок содержимого экрана в `<name>.png`. */
-    protected fun snapshot(name: String, dark: Boolean = false, content: @Composable () -> Unit) {
+    /** Снимок содержимого экрана в `<name>.png`; [dir] — куда (по умолчанию эталоны тестов). */
+    protected fun snapshot(name: String, dark: Boolean = false, dir: String = DIR, content: @Composable () -> Unit) {
         compose.setContent { OpenScalesTheme(darkTheme = dark, dynamicColor = false, content = content) }
         compose.waitForIdle()
-        compose.onRoot().captureRoboImage("$DIR/$name.png")
+        compose.onRoot().captureRoboImage("$dir/$name.png")
     }
 
     /**

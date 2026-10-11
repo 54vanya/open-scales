@@ -777,7 +777,7 @@ private fun BrewTopBar(
 
 /**
  * Кнопки варки: до старта «Тара» и «Старт» (в ожидании пролива — «Начните пролив»), после — «Пауза»/«Продолжить»;
- * «Стоп» всегда. Ниже мелко вес и время варки.
+ * «Стоп» — пока время рецепта не вышло, потом на его месте заполненная «Выйти». Ниже мелко вес и время варки.
  */
 @Composable
 private fun StepsControls(
@@ -841,7 +841,12 @@ private fun StepsControls(
                 modifier = height.then(slot(1.3f)).then(pause.modifier),
             ) { label(stringResource(if (ui.phase == BrewPhase.PAUSED) R.string.brew_resume else R.string.pause)) }
         }
-        OutlinedButton(onClick = onStop, modifier = height.then(slot(1f))) { label(stringResource(R.string.brew_stop)) }
+        if (ui.phase == BrewPhase.FINISHED) {
+            // Время рецепта вышло: останавливать нечего, главное действие — уйти с экрана.
+            Button(onClick = onStop, modifier = height.then(slot(1f))) { label(stringResource(R.string.brew_leave)) }
+        } else {
+            OutlinedButton(onClick = onStop, modifier = height.then(slot(1f))) { label(stringResource(R.string.brew_stop)) }
+        }
     }
     val small = MaterialTheme.typography.bodyMedium
     val color = MaterialTheme.colorScheme.onSurfaceVariant

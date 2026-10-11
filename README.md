@@ -16,10 +16,16 @@ drawables such as `ic_brew_espro`); the app has no user-facing product names for
 (for example "Black Mirror ESPRO").
 
 <p>
-  <img src="docs/screenshots/main-light.png" width="200" alt="Main screen, light theme">
-  <img src="docs/screenshots/main-dark.png" width="200" alt="Main screen, dark theme">
+  <img src="docs/screenshots/main-light.png" width="200" alt="Scale tab, light theme">
+  <img src="docs/screenshots/main-dark.png" width="200" alt="Scale tab, dark theme">
   <img src="docs/screenshots/settings-light.png" width="200" alt="App settings">
   <img src="docs/screenshots/scale-dark.png" width="200" alt="Scale details">
+</p>
+<p>
+  <img src="docs/screenshots/recipes.png" width="200" alt="Recipes tab">
+  <img src="docs/screenshots/brew-beans.png" width="200" alt="Brewing: weigh the beans">
+  <img src="docs/screenshots/brew-pour.png" width="200" alt="Brewing: pour board and steps">
+  <img src="docs/screenshots/editor.png" width="200" alt="Recipe editor">
 </p>
 
 ## Features
@@ -30,13 +36,19 @@ drawables such as `ic_brew_espro`); the app has no user-facing product names for
   (configurable), with an optional beep.
 - **App-owned timer:** keeps counting without the scale and across link drops. If the scale's timer is already
   running when the app connects (for example after an app update), the app picks it up.
+- **Brew by recipe:** built-in recipes for V60, flat-bottom drippers, Hario Switch, Chemex, AeroPress and French
+  press, grouped by brewer. Weigh the beans (or type the dose in) and every pour target is rescaled to that dose.
+  The brew starts by itself when water hits the coffee; a large board shows how much is left to pour in the current
+  step, a pace mark, and a countdown for the waits — readable at arm's length while you watch the kettle. Optional
+  beeps on step changes and reached targets.
+- **Your own recipes:** an editor for steps, waits, tare steps and hints; copy a built-in recipe as a starting point.
 - **Connection that takes care of itself:** remembers your scale, reconnects automatically, shows one clear status.
 - **Scale settings:** units, sensitivity, precision, auto power-off, button sound and brightness (per model),
   rename, power off, factory reset, forget. Found in the scale's details on the Scales screen.
 - **English and Russian,** with an in-app language choice that can differ from the system language.
 - **Light or dark theme** independent of the system, and the app's own palette or your wallpaper colors
   (Android 12+).
-- **Keeps the screen on** on the main screen during a brew; landscape layout.
+- **Keeps the screen on** while the scale is open; landscape layouts with the controls at the side.
 
 Tested on a real DOT (TES017, firmware v1.0.4) with a Pixel 9 Pro XL (Android 17). ESPRO and Basic 3 use the same
 protocol for the features above according to the official app; TES08 support is implemented from its legacy
@@ -44,7 +56,7 @@ protocol. None of these three have been tested on hardware.
 
 ## Not supported
 
-Open Scales is a scale companion: readings, timer, buttons and scale settings. It deliberately leaves out parts
+Open Scales is a scale companion: readings, timer, buttons, scale settings and brewing by recipe. It deliberately leaves out parts
 of the official app:
 
 - **ESPRO espresso mode.** In the official app the ESPRO has its own espresso flow: the scale waits for a trigger
@@ -67,7 +79,7 @@ There are no published releases yet. Build a release APK and install it:
 
 ```sh
 export JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home
-./gradlew :app:assembleRelease          # app/build/outputs/apk/release/app-release.apk, ~1.8 MB
+./gradlew :app:assembleRelease          # app/build/outputs/apk/release/app-release.apk, ~2 MB
 tools/dev.sh install release            # or: adb install -r app/build/outputs/apk/release/app-release.apk
 ```
 
@@ -77,16 +89,25 @@ Requires Android 8.0 (API 26) or newer and Bluetooth LE.
 ## Development
 
 - Kotlin, Jetpack Compose, Material 3 Expressive (`material3 1.5.0-alpha28`), minSdk 26, compile/targetSdk 37.
-- JDK 17 is required. Full check (tests, debug build, lint — lint must report "No issues found"):
+- JDK 17 is required. Full check (unit tests with screenshot comparison, debug build, lint):
 
   ```sh
-  ./gradlew :app:testDebugUnitTest :app:assembleDebug :app:lintDebug
+  ./gradlew :app:verifyRoborazziDebug :app:assembleDebug :app:lintDebug
+  ```
+
+- Approved screens are locked by screenshot tests (Roborazzi + Robolectric, no emulator needed); references live in
+  `app/src/test/screenshots`. The screenshots in this README are rendered the same way by `ReadmeScreenshotTest`
+  into `docs/screenshots`, so a changed screen fails the check until they are re-recorded:
+
+  ```sh
+  ./gradlew :app:recordRoborazziDebug --tests '*ReadmeScreenshotTest'
   ```
 
 - `tools/dev.sh` — device and emulator harness: install, launch, screenshots, filtered BLE logcat, emulator
   control. Run it without arguments for the list of commands.
 - Debug builds have a BLE log screen (bug icon on the main screen) with export, timer ticks and a main-thread
-  stall watchdog.
+  stall watchdog, and a virtual scale on the Scales screen (driven by `tools/dev.sh sim …`) that works on an
+  emulator without Bluetooth.
 
 ### Structure
 
@@ -95,10 +116,12 @@ protocol/  pure Kotlin: frames (A5 5A … CRC16/Modbus), message decoder, legacy
 ble/       BleTransport over BluetoothGatt (one GATT operation in flight), scanner, BLE log (debug)
 session/   command queue, ScaleSession (bond → MTU → notify → handshake → READY), ScaleRepository
            (current session, remembered scale, auto-reconnect, app-owned timer)
-data/      settings (DataStore), language, theme and appearance stores
-sound/     button beep (AudioTrack)
-ui/        one Activity per screen: main screen, Scales (search and remembered scale), scale details,
-           app settings; debug BLE log
+data/      settings (DataStore), language, theme and appearance stores, user recipes
+recipe/    pure Kotlin: recipes, built-in recipes, step timeline, water distribution, pour detection
+sim/       pure Kotlin: scale emulator and the virtual scale of debug builds
+sound/     button and step beeps (AudioTrack)
+ui/        one Activity per screen: main screen (Scale and Recipes tabs), brewing, recipe editor,
+           Scales (search and remembered scale), scale details, app settings; debug BLE log
 ```
 
 ### Specs and docs

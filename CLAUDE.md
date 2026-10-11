@@ -84,6 +84,9 @@ Compose рисуется в JVM без эмулятора, эталоны — `a
 с простым `Application`, светлой темой и собственными цветами, по-русски, 411×914 dp (узкий — 320 dp). Robolectric — SDK
 34: SDK 35+ требует Java 21, проект на Java 17.
 
+Скриншоты README (`docs/screenshots`) рисует тот же механизм — `ReadmeScreenshotTest` (по-английски, 360×780 dp): изменился
+экран из README — сверка упадёт, перезаписать `:app:recordRoborazziDebug --tests '*ReadmeScreenshotTest'` и просмотреть.
+
 ## OpenSpec
 
 Изменения поведения оформляются через OpenSpec (`/opsx:propose`, `/opsx:apply`, `/opsx:archive`; `openspec list`,

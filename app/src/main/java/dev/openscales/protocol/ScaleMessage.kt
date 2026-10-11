@@ -20,10 +20,11 @@ sealed interface ScaleMessage {
     }
 
     /**
-     * [status] — первый байт ответа 0x05; оригинал его не использует, смысл не подтверждён
-     * (на DOT приходит `3`). Процент — второй байт (`DeviceStateView.updateBatteryInfo`).
+     * [bars] — первый байт ответа 0x05: число делений значка батареи на самих весах (по официальному описанию
+     * протокола; на DOT приходит `3`). Оригинал его не использует. Процент — второй байт
+     * (`DeviceStateView.updateBatteryInfo`).
      */
-    data class Battery(val percent: Int, val status: Int, override val frameType: Int = Frame.TYPE_READ) :
+    data class Battery(val percent: Int, val bars: Int, override val frameType: Int = Frame.TYPE_READ) :
         ScaleMessage { override val cmd get() = Cmd.BATTERY }
 
     data class Unit(val unit: WeightUnit, override val frameType: Int = Frame.TYPE_READ) : ScaleMessage {
@@ -109,7 +110,7 @@ object MessageDecoder {
 
             Cmd.BATTERY -> if (p.size < 2) null else ScaleMessage.Battery(
                 percent = p.u8(1).coerceIn(0, 100),
-                status = p.u8(0),
+                bars = p.u8(0),
                 frameType = t,
             )
 
