@@ -754,7 +754,8 @@ private fun BrewTopBar(
     manualDoseEnabled: Boolean = true,
 ) {
     TopAppBar(
-        title = { Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        // Авторское название с автором в одну строку не помещается: заголовок переносится, а не обрезается.
+        title = { Text(title, maxLines = 2, overflow = TextOverflow.Ellipsis) },
         subtitle = { Text(subtitle, maxLines = 1, overflow = TextOverflow.Ellipsis) },
         navigationIcon = {
             IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.back)) }

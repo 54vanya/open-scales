@@ -2,6 +2,7 @@ package dev.openscales.ui.screenshots
 
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
 import dev.openscales.protocol.ScaleModel
 import dev.openscales.recipe.BuiltInRecipes
 import dev.openscales.recipe.Difficulty
@@ -12,6 +13,7 @@ import dev.openscales.session.ConnectionPhase
 import dev.openscales.session.ScaleState
 import dev.openscales.ui.recipes.RecipesScreen
 import org.junit.Test
+import org.robolectric.annotation.Config
 
 /** Вкладка «Рецепты»: «Мои», группы по оборудованию, сложность справа, без иконок. */
 class RecipesScreenshotTest : ScreenshotTest() {
@@ -28,7 +30,15 @@ class RecipesScreenshotTest : ScreenshotTest() {
     )
 
     @Test
-    fun recipes() = snapshot("recipes") {
+    fun recipes() = snapshot("recipes") { RecipeList() }
+
+    /** Узкий экран: длинные авторские названия переносятся, инициал от фамилии не отрывается. */
+    @Test
+    @Config(qualifiers = NARROW)
+    fun recipesNarrow() = snapshot("recipes_narrow") { RecipeList() }
+
+    @Composable
+    private fun RecipeList() {
         RecipesScreen(
             recipes = BuiltInRecipes.all,
             userRecipes = listOf(dripchik),

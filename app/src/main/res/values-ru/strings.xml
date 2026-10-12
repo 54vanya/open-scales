@@ -199,7 +199,7 @@
     <string name="step_weight_poured">Сколько налито</string>
 
     <!-- Встроенный рецепт -->
-    <string name="recipe_hoffmann_title">V60 по Хоффману</string>
+    <string name="recipe_hoffmann_title">The Ultimate V60 Technique ·\u00A0Дж.\u00A0Хоффман</string>
     <string name="recipe_hoffmann_description">Помол средне-мелкий. Вода 94–95 °C.</string>
     <string name="recipe_step_bloom">Цветение</string>
     <string name="recipe_step_swirl">Взболтайте</string>
@@ -227,7 +227,7 @@
     <string name="recipe_note_stir_three_four">3–4 раза, чтобы намочить всё</string>
     <string name="recipe_note_flip">Наденьте крышку, выдавите воздух, переверните на чашку</string>
     <string name="recipe_note_press_gently">Мягко, весом рук</string>
-    <string name="recipe_kasuya_title">4:6 Тэцу Касуи</string>
+    <string name="recipe_kasuya_title">4:6 Method ·\u00A0Т.\u00A0Касуя</string>
     <string name="recipe_kasuya_description">Помол крупный, как для френч-пресса. Вода 93 °C. Вода делится 4:6: первая часть задаёт сладость и кислотность, вторая — крепость.</string>
     <string name="recipe_note_spiral_center">По спирали от центра и обратно</string>
     <string name="recipe_hint_remove_dripper">В 3:30 снимите воронку</string>
@@ -238,8 +238,8 @@
     <string name="recipe_note_stir_one_circle">Один мягкий круг у стенок</string>
     <string name="recipe_note_spin_level">2–3 оборота, чтобы выровнять слой</string>
     <string name="recipe_hint_drawdown_330">Пролив должен закончиться к 3:00–3:30</string>
-    <string name="recipe_hedrick_title">V60 Ленса Хедрика</string>
-    <string name="recipe_hedrick_description">One and Done: два цветения и один пролив. Помол средне-мелкий. Вода 93 °C. Пролив дольше 2:30 — помол крупнее.</string>
+    <string name="recipe_hedrick_title">One and Done ·\u00A0Л.\u00A0Хедрик</string>
+    <string name="recipe_hedrick_description">Два цветения и один пролив. Помол средне-мелкий. Вода 93 °C. Пролив дольше 2:30 — помол крупнее.</string>
     <string name="recipe_kalita_title">Kalita Wave</string>
     <string name="recipe_kalita_description">Помол средне-мелкий. Вода около 96 °C.</string>
     <string name="recipe_note_spiral_slowly">Медленно по спирали</string>
@@ -249,7 +249,7 @@
     <string name="recipe_note_stir_dry">Размешайте, чтобы не осталось сухих комков</string>
     <string name="recipe_note_wiggle">Покачивая струю, затем по спирали</string>
     <string name="recipe_note_to_top">До края</string>
-    <string name="recipe_hoffmann_aeropress_title">Аэропресс Хоффмана</string>
+    <string name="recipe_hoffmann_aeropress_title">The Ultimate AeroPress Technique ·\u00A0Дж.\u00A0Хоффман</string>
     <string name="recipe_hoffmann_aeropress_description">Вода 99 °C. Фильтр не промывать, аэропресс не прогревать.</string>
     <string name="recipe_note_plunger_on">Сразу вставьте поршень на 1 см</string>
     <string name="recipe_note_hold_both">Держа за корпус и поршень</string>
@@ -258,11 +258,11 @@
     <!-- Журнал BLE (кнопка в debug-сборке) -->
     <string name="journal_title">Журнал BLE</string>
     <!-- Иммерсия, чемпионские рецепты, сложность -->
-    <string name="recipe_hoffmann_one_cup_title">V60 Хоффмана на одну чашку</string>
+    <string name="recipe_hoffmann_one_cup_title">A Better 1 Cup V60 Technique ·\u00A0Дж.\u00A0Хоффман</string>
     <string name="recipe_hoffmann_one_cup_description">Пять одинаковых проливов. Помол средне-мелкий — как можно мельче без горечи. Вода: светлая обжарка — кипяток, средняя — 96 °C.</string>
-    <string name="recipe_kasuya_switch_title">Гибрид Тэцу Касуи</string>
+    <string name="recipe_kasuya_switch_title">Devil Recipe ·\u00A0Т.\u00A0Касуя</string>
     <string name="recipe_kasuya_switch_description">Гибрид: сначала пролив с открытым клапаном, потом настаивание. Помол средне-мелкий. Вода 93 °C, для третьего пролива — около 75 °C. Слив дольше 3:00 — помол крупнее.</string>
-    <string name="recipe_hoffmann_french_press_title">Френч-пресс Хоффмана</string>
+    <string name="recipe_hoffmann_french_press_title">The Ultimate French Press Technique ·\u00A0Дж.\u00A0Хоффман</string>
     <string name="recipe_hoffmann_french_press_description">Долгий настой без прожима. Помол средне-крупный. Вода — кипяток. На 2 чашки.</string>
     <string name="recipe_wac2022_title">Джибби Литтл (WAC 2022)</string>
     <string name="recipe_wac2022_description">Чемпион мира по аэропрессу 2022 (Австралия). Аэропресс перевёрнут. Вода 90 °C.</string>

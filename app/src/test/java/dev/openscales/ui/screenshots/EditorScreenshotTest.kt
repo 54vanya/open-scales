@@ -45,7 +45,7 @@ class EditorScreenshotTest : ScreenshotTest() {
                 is Text.Res -> context.getString(text.id)
                 is Text.Plain -> text.value
             }
-        }, id = "user:copy").copy(title = "V60 по Хоффману (копия)")
+        }, id = "user:copy").copy(title = "The Ultimate V60 Technique ·\u00A0Дж.\u00A0Хоффман (копия)")
     }
 
     @Test

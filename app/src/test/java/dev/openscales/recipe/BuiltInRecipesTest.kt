@@ -164,6 +164,32 @@ class BuiltInRecipesTest {
         }
     }
 
+    /** Авторское название идёт первым и не переводится, после « · » — инициал и фамилия автора; точка и автор переносятся только вместе. */
+    @Test
+    fun `author names come first`() {
+        val nbsp = "\\u00A0"
+        val expected = mapOf(
+            "recipe_hoffmann_title" to Triple("The Ultimate V60 Technique", "J.${nbsp}Hoffmann", "Дж.${nbsp}Хоффман"),
+            "recipe_hoffmann_one_cup_title" to Triple("A Better 1 Cup V60 Technique", "J.${nbsp}Hoffmann", "Дж.${nbsp}Хоффман"),
+            "recipe_kasuya_title" to Triple("4:6 Method", "T.${nbsp}Kasuya", "Т.${nbsp}Касуя"),
+            "recipe_hedrick_title" to Triple("One and Done", "L.${nbsp}Hedrick", "Л.${nbsp}Хедрик"),
+            "recipe_kasuya_switch_title" to Triple("Devil Recipe", "T.${nbsp}Kasuya", "Т.${nbsp}Касуя"),
+            "recipe_hoffmann_aeropress_title" to Triple("The Ultimate AeroPress Technique", "J.${nbsp}Hoffmann", "Дж.${nbsp}Хоффман"),
+            "recipe_hoffmann_french_press_title" to
+                Triple("The Ultimate French Press Technique", "J.${nbsp}Hoffmann", "Дж.${nbsp}Хоффман"),
+        )
+        val string = Regex("""<string name="(recipe_[a-z0-9_]+)">(.*?)</string>""")
+        for (dir in listOf("values", "values-ru")) {
+            val file = java.io.File("src/main/res/$dir/strings.xml")
+            assertTrue("$file not found", file.isFile)
+            val strings = string.findAll(file.readText()).associate { it.groupValues[1] to it.groupValues[2] }
+            for ((name, title) in expected) {
+                val author = if (dir == "values") title.second else title.third
+                assertEquals("$dir/$name", "${title.first} ·$nbsp$author", strings[name])
+            }
+        }
+    }
+
     @Test
     fun `kasuya at 18 grams`() {
         assertEquals(listOf(54.0, 108.0, 162.0, 216.0, 270.0), BuiltInRecipes.kasuya46.targetsG(18.0).map { Math.round(it * 1e6) / 1e6 })

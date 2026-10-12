@@ -203,7 +203,7 @@
     <string name="step_weight_poured">How much is poured</string>
 
     <!-- Built-in recipe -->
-    <string name="recipe_hoffmann_title">Hoffmann V60</string>
+    <string name="recipe_hoffmann_title">The Ultimate V60 Technique ·\u00A0J.\u00A0Hoffmann</string>
     <string name="recipe_hoffmann_description">Medium-fine grind. Water 94–95 °C.</string>
     <string name="recipe_step_bloom">Bloom</string>
     <string name="recipe_step_swirl">Swirl</string>
@@ -234,7 +234,7 @@
     <string name="recipe_note_stir_three_four">3–4 times to wet all the grounds</string>
     <string name="recipe_note_flip">Cap on, push the air out, flip onto the cup</string>
     <string name="recipe_note_press_gently">Gently, with the weight of your hands</string>
-    <string name="recipe_kasuya_title">Tetsu Kasuya 4:6</string>
+    <string name="recipe_kasuya_title">4:6 Method ·\u00A0T.\u00A0Kasuya</string>
     <string name="recipe_kasuya_description">Coarse grind, like for a French press. Water 93 °C. Water is split 4:6: the first part sets sweetness and acidity, the second sets strength.</string>
     <string name="recipe_note_spiral_center">Spiral from the center out and back</string>
     <string name="recipe_hint_remove_dripper">At 3:30 remove the dripper</string>
@@ -245,8 +245,8 @@
     <string name="recipe_note_stir_one_circle">One gentle circle along the walls</string>
     <string name="recipe_note_spin_level">2–3 turns to level the bed</string>
     <string name="recipe_hint_drawdown_330">Drawdown should finish by 3:00–3:30</string>
-    <string name="recipe_hedrick_title">Lance Hedrick V60</string>
-    <string name="recipe_hedrick_description">One and Done: two blooms and one pour. Medium-fine grind. Water 93 °C. Drawdown longer than 2:30 — grind coarser.</string>
+    <string name="recipe_hedrick_title">One and Done ·\u00A0L.\u00A0Hedrick</string>
+    <string name="recipe_hedrick_description">Two blooms and one pour. Medium-fine grind. Water 93 °C. Drawdown longer than 2:30 — grind coarser.</string>
     <string name="recipe_kalita_title">Kalita Wave</string>
     <string name="recipe_kalita_description">Medium-fine grind. Water about 96 °C.</string>
     <string name="recipe_note_spiral_slowly">Slow spiral</string>
@@ -256,18 +256,18 @@
     <string name="recipe_note_stir_dry">Stir so no dry clumps remain</string>
     <string name="recipe_note_wiggle">Wiggle the stream, then spiral</string>
     <string name="recipe_note_to_top">Up to the top of the brewer</string>
-    <string name="recipe_hoffmann_aeropress_title">Hoffmann AeroPress</string>
+    <string name="recipe_hoffmann_aeropress_title">The Ultimate AeroPress Technique ·\u00A0J.\u00A0Hoffmann</string>
     <string name="recipe_hoffmann_aeropress_description">Water 99 °C. No filter rinse, no preheating.</string>
     <string name="recipe_note_plunger_on">Insert the plunger about 1 cm right away</string>
     <string name="recipe_note_hold_both">Holding the brewer and the plunger</string>
     <string name="recipe_note_press_slowly">Slowly, all the way</string>
 
     <!-- Иммерсия, чемпионские рецепты, сложность -->
-    <string name="recipe_hoffmann_one_cup_title">Hoffmann’s 1-cup V60</string>
+    <string name="recipe_hoffmann_one_cup_title">A Better 1 Cup V60 Technique ·\u00A0J.\u00A0Hoffmann</string>
     <string name="recipe_hoffmann_one_cup_description">Five equal pours. Medium-fine grind, as fine as you can go without bitterness. Water: light roast — just off the boil, medium — 96 °C.</string>
-    <string name="recipe_kasuya_switch_title">Tetsu Kasuya’s hybrid</string>
+    <string name="recipe_kasuya_switch_title">Devil Recipe ·\u00A0T.\u00A0Kasuya</string>
     <string name="recipe_kasuya_switch_description">Hybrid: pour-over with the valve open, then immersion. Medium-fine grind. Water 93 °C, the third pour about 75 °C. Drawdown past 3:00 — grind coarser.</string>
-    <string name="recipe_hoffmann_french_press_title">Hoffmann’s French press</string>
+    <string name="recipe_hoffmann_french_press_title">The Ultimate French Press Technique ·\u00A0J.\u00A0Hoffmann</string>
     <string name="recipe_hoffmann_french_press_description">A long steep with no pressing. Medium-coarse grind. Water just off the boil. Makes 2 cups.</string>
     <string name="recipe_wac2022_title">Jibbi Little (WAC 2022)</string>
     <string name="recipe_wac2022_description">2022 World AeroPress Champion (Australia). Inverted. Water 90 °C.</string>
