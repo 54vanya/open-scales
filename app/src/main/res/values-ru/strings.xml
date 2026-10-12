@@ -330,6 +330,8 @@
     <string name="editor_duration_hint">Например, 1:30</string>
     <string name="editor_field_target">Воды к концу шага</string>
     <string name="editor_target_hint">Сколько всего должно быть налито к концу шага</string>
+    <string name="editor_field_target_max">Можно до</string>
+    <string name="editor_target_max_hint">Необязательно: верхняя граница, если воды можно налить от и до</string>
     <string name="editor_field_note">Как делать</string>
     <string name="editor_show_time">Обратный отсчёт на табло</string>
     <string name="editor_field_hint_text">Текст</string>
@@ -357,6 +359,9 @@
     <string name="editor_error_duration">Секунд не больше 59, например 1:30</string>
     <string name="editor_error_zero">Не может быть ноль</string>
     <string name="editor_error_below_previous">Выше уже %1$s — здесь не меньше</string>
+    <string name="editor_error_max_not_above">Должно быть больше %1$s</string>
+    <string name="editor_error_max_above_next">Следующий рубеж — %1$s, здесь не больше</string>
+    <string name="editor_error_max_last">У последнего пролива диапазона быть не может</string>
     <string name="editor_error_no_steps">Добавьте хотя бы один шаг</string>
     <string name="editor_save_failed">Не удалось сохранить рецепт</string>
 </resources>

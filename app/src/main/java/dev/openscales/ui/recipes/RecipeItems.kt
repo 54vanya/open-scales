@@ -111,7 +111,7 @@ fun StepCard(
                     Text(
                         stringResource(
                             if (water.mode == StepWeightMode.REMAINING) R.string.brew_left_of else R.string.brew_poured_of,
-                            stepWeightWithUnit(water.targetG, unit),
+                            stepTargetWithUnit(water.targetG, water.maxG, unit),
                         ),
                         style = MaterialTheme.typography.labelMedium,
                         color = if (active) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,

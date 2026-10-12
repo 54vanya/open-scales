@@ -41,23 +41,38 @@ object PourDistribution {
     fun values(recipe: Recipe, doseG: Double, pouredIn: (part: Int) -> Double, mode: StepWeightMode): Map<Int, StepWater> =
         buildMap {
             recipe.targetsByPart(doseG).forEachIndexed { part, targets ->
-                val water = values(targets.map { it.second }, pouredIn(part), mode)
+                val maxG = targets.map { (index, target) -> recipe.maxTargetG(index, doseG) ?: target }
+                val water = values(targets.map { it.second }, pouredIn(part), mode, maxG)
                 targets.zip(water) { (index, _), value -> put(index, value) }
             }
         }
 
-    /** Значения шагов с целью в выбранном режиме, в граммах. */
-    fun values(targetsG: List<Double>, weightG: Double, mode: StepWeightMode): List<StepWater> =
-        fill(targetsG, weightG).zip(targetsG) { f, c ->
-            StepWater(if (mode == StepWeightMode.REMAINING) c - f else f, c, mode)
+    /**
+     * Значения шагов с целью в выбранном режиме, в граммах. [maxG] — верхние границы шагов с диапазоном (у шага
+     * с одной целью — она же). Рубеж между шагами — всегда цель, поэтому «осталось» шага с диапазоном считается до
+     * неё, а «налито» в сам шаг растёт до его максимума: вода в зоне уже идёт и в счёт следующего шага.
+     */
+    fun values(
+        targetsG: List<Double>,
+        weightG: Double,
+        mode: StepWeightMode,
+        maxG: List<Double> = targetsG,
+    ): List<StepWater> {
+        val w = max(weightG, 0.0)
+        return fill(targetsG, weightG).mapIndexed { i, f ->
+            val c = targetsG[i]
+            val poured = if (maxG[i] > c) w.coerceIn(f, maxG[i]) else f
+            StepWater(if (mode == StepWeightMode.REMAINING) c - f else poured, c, mode, maxG[i])
         }
+    }
 }
 
 /**
  * Вода шага к показу, всё в граммах: [grams] — крупное значение режима (остаток или налитое), [targetG] — цель шага,
- * она показывается мелко под ним с подписью режима. Единицы весов — при форматировании.
+ * она показывается мелко под ним с подписью режима. [maxG] — верхняя граница шага с диапазоном, иначе та же цель.
+ * Единицы весов — при форматировании.
  */
-data class StepWater(val grams: Double, val targetG: Double, val mode: StepWeightMode)
+data class StepWater(val grams: Double, val targetG: Double, val mode: StepWeightMode, val maxG: Double = targetG)
 
 const val GRAMS_PER_OUNCE = 28.349523
 
@@ -71,6 +86,12 @@ fun fromGrams(grams: Double, unit: WeightUnit): Double = if (unit == WeightUnit.
  */
 fun formatStepWeight(grams: Double, unit: WeightUnit): String =
     formatSignedWeight(grams, unit, decimals = if (unit == WeightUnit.OUNCE) 2 else 0)
+
+/**
+ * Цель шага для подписей: «30», а у шага с диапазоном — обе границы через тире, «30–45». Единица — одна, после.
+ */
+fun formatStepTarget(targetG: Double, maxG: Double, unit: WeightUnit): String =
+    if (maxG > targetG) "${formatStepWeight(targetG, unit)}–${formatStepWeight(maxG, unit)}" else formatStepWeight(targetG, unit)
 
 /** Вес с точностью весов — граммы с десятой, унции с сотыми (крупное значение табло пролива); ноль без минуса. */
 fun formatReadingWeight(grams: Double, unit: WeightUnit): String = formatSignedWeight(grams, unit, unit.decimals)

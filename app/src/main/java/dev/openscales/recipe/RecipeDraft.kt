@@ -69,6 +69,7 @@ data class RecipeDraft(
     /**
      * Копия элемента [key] сразу после него под ключом [newKey]. Рубеж копии шага сдвигается на прибавку шага:
      * так серия одинаковых проливов набирается дублированием. Без прибавки поле рубежа копируется как есть.
+     * У шага с диапазоном на ту же прибавку сдвигается и максимум.
      */
     fun duplicate(key: Long, newKey: Long): RecipeDraft {
         val index = indexOf(key)
@@ -77,9 +78,11 @@ data class RecipeDraft(
             is DraftItem.Step -> {
                 val target = item.waterG
                 val increment = increments()[key]
+                val max = item.waterMaxG
                 item.copy(
                     key = newKey,
                     targetG = if (target != null && increment != null) (target + increment).toString() else item.targetG,
+                    targetMaxG = if (max != null && increment != null) (max + increment).toString() else item.targetMaxG,
                 )
             }
             is DraftItem.Hint -> item.copy(key = newKey)
@@ -121,6 +124,7 @@ data class RecipeDraft(
                         // Вода — только у пролива: у действия и тары поля нет, даже если в черновике что-то осталось.
                         targetG = item.waterG,
                         tare = item.kind == StepKind.TARE,
+                        targetMaxG = item.waterMaxG,
                     )
                     is DraftItem.Hint -> RecipeItem.Hint(Text.Plain(item.text.trim()))
                 }
@@ -153,9 +157,14 @@ sealed interface DraftItem {
         val note: String = "",
         /** Вид шага задаётся при добавлении и дальше не меняется. */
         val kind: StepKind = StepKind.POUR,
+        /** Верхняя граница воды у пролива с диапазоном («можно до»); пусто — у шага одна цель. */
+        val targetMaxG: String = "",
     ) : DraftItem {
         /** Вода шага, если это пролив и число разобрано. */
         val waterG: Int? get() = if (kind == StepKind.POUR) parseGrams(targetG) else null
+
+        /** Максимум воды шага, если это пролив с диапазоном и число разобрано. */
+        val waterMaxG: Int? get() = if (kind == StepKind.POUR) parseGrams(targetMaxG) else null
     }
 
     data class Hint(override val key: Long, val text: String = "") : DraftItem
@@ -204,6 +213,7 @@ fun Recipe.toDraft(resolve: (Text) -> String, id: String = this.id): RecipeDraft
                 title = resolve(item.title),
                 duration = durationDigits(item.durationS),
                 targetG = item.targetG?.toString().orEmpty(),
+                targetMaxG = item.targetMaxG?.toString().orEmpty(),
                 note = item.note?.let(resolve).orEmpty(),
                 kind = when {
                     item.tare -> StepKind.TARE
@@ -237,7 +247,7 @@ private val DIGITS = Regex("""\d{1,5}""")
 
 // region проверка
 
-enum class DraftField { TITLE, DOSE, STEP_TITLE, DURATION, TARGET, HINT_TEXT }
+enum class DraftField { TITLE, DOSE, STEP_TITLE, DURATION, TARGET, TARGET_MAX, HINT_TEXT }
 
 enum class DraftProblem {
     /** Пусто. */
@@ -251,10 +261,23 @@ enum class DraftProblem {
 
     /** Рубеж меньше рубежа шага выше. */
     BELOW_PREVIOUS,
+
+    /** Максимум не больше воды шага. */
+    MAX_NOT_ABOVE_TARGET,
+
+    /** Максимум больше рубежа следующего пролива части. */
+    MAX_ABOVE_NEXT,
+
+    /** Максимум у последнего пролива части: итог воды — одно число. */
+    MAX_ON_LAST,
 }
 
 sealed interface DraftError {
-    /** Ошибка поля. [key] — элемент, `null` — карточка рецепта. [previousG] — рубеж выше для [BELOW_PREVIOUS]. */
+    /**
+     * Ошибка поля. [key] — элемент, `null` — карточка рецепта. [previousG] — рубеж, с которым не сошлось: выше для
+     * [DraftProblem.BELOW_PREVIOUS], вода самого шага для [DraftProblem.MAX_NOT_ABOVE_TARGET], следующий рубеж для
+     * [DraftProblem.MAX_ABOVE_NEXT].
+     */
     data class Field(val key: Long?, val field: DraftField, val problem: DraftProblem, val previousG: Int? = null) : DraftError
 
     /** В рецепте нет ни одного шага. */
@@ -267,7 +290,7 @@ fun validate(draft: RecipeDraft): List<DraftError> = buildList {
     number(draft.doseG, null, DraftField.DOSE, ::parseGrams)?.let(::add)
     if (draft.items.none { it is DraftItem.Step }) add(DraftError.NoSteps)
     var previous: Int? = null
-    for (item in draft.items) {
+    draft.items.forEachIndexed { index, item ->
         when (item) {
             is DraftItem.Step -> {
                 if (item.title.isBlank()) add(DraftError.Field(item.key, DraftField.STEP_TITLE, DraftProblem.EMPTY))
@@ -288,11 +311,26 @@ fun validate(draft: RecipeDraft): List<DraftError> = buildList {
                     }
                     if (error == null && target != null) previous = maxOf(previous ?: 0, target)
                 }
+                if (item.kind == StepKind.POUR && item.targetMaxG.isNotBlank()) maxError(draft, index, item)?.let(::add)
             }
             is DraftItem.Hint ->
                 if (item.text.isBlank()) add(DraftError.Field(item.key, DraftField.HINT_TEXT, DraftProblem.EMPTY))
         }
     }
+}
+
+/**
+ * Ошибка максимума пролива с диапазоном: число больше воды шага, не больше рубежа следующего пролива той же части,
+ * и такой пролив ниже есть.
+ */
+private fun maxError(draft: RecipeDraft, index: Int, item: DraftItem.Step): DraftError.Field? {
+    number(item.targetMaxG, item.key, DraftField.TARGET_MAX, ::parseGrams)?.let { return it }
+    val max = parseGrams(item.targetMaxG) ?: return null
+    val target = item.waterG ?: return null
+    if (max <= target) return DraftError.Field(item.key, DraftField.TARGET_MAX, DraftProblem.MAX_NOT_ABOVE_TARGET, target)
+    val next = draft.items.drop(index + 1).takeWhile { !it.isTare }.firstNotNullOfOrNull { (it as? DraftItem.Step)?.waterG }
+        ?: return DraftError.Field(item.key, DraftField.TARGET_MAX, DraftProblem.MAX_ON_LAST)
+    return if (max > next) DraftError.Field(item.key, DraftField.TARGET_MAX, DraftProblem.MAX_ABOVE_NEXT, next) else null
 }
 
 /** Обязательное положительное число. */

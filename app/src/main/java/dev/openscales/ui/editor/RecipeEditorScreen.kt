@@ -255,7 +255,9 @@ fun RecipeEditorScreen(
                                 remaining = null,
                                 water = null,
                                 unit = WeightUnit.GRAM,
+                                // У пролива с диапазоном — обе границы: «30–45 г».
                                 target = item.targetG.takeIf { item.kind == StepKind.POUR && it.isNotBlank() }
+                                    ?.let { if (item.targetMaxG.isBlank()) it else "$it–${item.targetMaxG}" }
                                     ?.let { stringResource(R.string.value_with_unit, it, gram) },
                                 targetIncrement = increments[item.key]?.let {
                                     stringResource(R.string.editor_increment, stringResource(R.string.value_with_unit, it.toString(), gram))
@@ -484,6 +486,18 @@ private fun ExpandedItem(
                             keyboardType = KeyboardType.Number,
                             modifier = Modifier.focusRequester(targetFocus),
                         )
+                        // Необязательная верхняя граница: с ней шаг — диапазон «от и до» (цветение ×2–×3).
+                        EditorField(
+                            value = item.targetMaxG,
+                            onValueChange = { v ->
+                                actions.updateItem(item.key) { (it as DraftItem.Step).copy(targetMaxG = v.filter(Char::isDigit)) }
+                            },
+                            label = stringResource(R.string.editor_field_target_max),
+                            error = error(DraftField.TARGET_MAX),
+                            hint = stringResource(R.string.editor_target_max_hint),
+                            suffix = gram,
+                            keyboardType = KeyboardType.Number,
+                        )
                     }
                     EditorField(
                         value = item.note,
@@ -546,16 +560,23 @@ private fun errorText(error: DraftError.Field): String = when (error.problem) {
             DraftField.DURATION -> R.string.editor_error_empty_duration
             DraftField.HINT_TEXT -> R.string.editor_error_empty_hint
             DraftField.TARGET -> R.string.editor_error_empty_water
+            // Максимум необязателен: пустым ошибкой не бывает.
+            DraftField.TARGET_MAX -> R.string.editor_error_grams
         },
     )
     DraftProblem.ZERO -> stringResource(R.string.editor_error_zero)
     DraftProblem.INVALID -> stringResource(
         if (error.field == DraftField.DURATION) R.string.editor_error_duration else R.string.editor_error_grams,
     )
-    DraftProblem.BELOW_PREVIOUS -> stringResource(
-        R.string.editor_error_below_previous,
+    DraftProblem.BELOW_PREVIOUS, DraftProblem.MAX_NOT_ABOVE_TARGET, DraftProblem.MAX_ABOVE_NEXT -> stringResource(
+        when (error.problem) {
+            DraftProblem.MAX_NOT_ABOVE_TARGET -> R.string.editor_error_max_not_above
+            DraftProblem.MAX_ABOVE_NEXT -> R.string.editor_error_max_above_next
+            else -> R.string.editor_error_below_previous
+        },
         stringResource(R.string.value_with_unit, error.previousG.toString(), stringResource(WeightUnit.GRAM.symbolRes())),
     )
+    DraftProblem.MAX_ON_LAST -> stringResource(R.string.editor_error_max_last)
 }
 
 private const val MAX_DURATION_DIGITS = 3

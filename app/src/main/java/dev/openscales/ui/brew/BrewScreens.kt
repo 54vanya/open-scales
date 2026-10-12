@@ -66,6 +66,10 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import dev.openscales.ui.recipes.stepTargetWithUnit
+import androidx.compose.material3.ColorScheme
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -286,7 +290,11 @@ private fun RecipePreview(recipe: Recipe, baseG: Double, unit: WeightUnit) {
                     )
                     Text(item.title.resolve(), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                     val right = when {
-                        item.targetG != null -> stepWeightWithUnit(recipe.scaled(item.targetG, baseG), unit)
+                        item.targetG != null -> stepTargetWithUnit(
+                            recipe.scaled(item.targetG, baseG),
+                            recipe.scaled(item.targetMaxG ?: item.targetG, baseG),
+                            unit,
+                        )
                         index == lastStep -> stringResource(R.string.brew_until, formatTime(timeline.total))
                         else -> null
                     }
@@ -590,10 +598,12 @@ private fun PourBoard(
                         unitSymbol = stringResource(unit.symbolRes()),
                         color = focus.state.color(),
                         slashedZero = slashedZero,
+                        // Внутри зоны диапазона рядом — сколько ещё можно налить до её верха.
+                        room = focus.roomG?.takeIf { mode == StepWeightMode.REMAINING }?.let { formatReadingWeight(it, unit) },
                     )
                     val target = stringResource(
                         if (mode == StepWeightMode.REMAINING) R.string.brew_left_of else R.string.brew_poured_of,
-                        stepWeightWithUnit(focus.targetG, unit),
+                        stepTargetWithUnit(focus.targetG, focus.maxG, unit),
                     )
                     // Вода идёт не в текущий по времени шаг (запоздалый пролив, пауза) — назвать её шаг.
                     val waterStep = (recipe.items[focus.itemIndex] as RecipeItem.Step).title.resolve()
@@ -620,6 +630,7 @@ private fun PourBoard(
                         bar?.paceFraction(timeline, at) ?: 0f
                     },
                     over = bar?.state == TargetState.OVER,
+                    zoneStart = bar?.zoneStart,
                     modifier = Modifier.alpha(if (bar != null) 1f else 0f),
                 )
             }
@@ -630,12 +641,14 @@ private fun PourBoard(
 /**
  * Полоса налива: налитое в шаг воды ([fraction]) и поверх — отметка идеального уровня ([pace] — сколько было бы
  * налито к этой секунде при ровном проливе). Отстаёшь — край налитого не дошёл до отметки; опережаешь — налитое ушло
- * за неё. Без анимации: значения показываются сразу.
+ * за неё. Без анимации: значения показываются сразу. У шага с диапазоном полоса идёт до его максимума, а участок
+ * от [zoneStart] до конца — зона, куда достаточно попасть, — выделен на дорожке.
  */
 @Composable
-private fun PourBar(fraction: Float, pace: () -> Float, over: Boolean, modifier: Modifier = Modifier) {
+private fun PourBar(fraction: Float, pace: () -> Float, over: Boolean, zoneStart: Float?, modifier: Modifier = Modifier) {
     val colors = MaterialTheme.colorScheme
     val track = colors.outlineVariant
+    val zone = colors.zoneTrack()
     val fill = if (over) colors.error else colors.primary
     val markColor = colors.onSurface
     // Одна полоса, скруглённая только снаружи: дорожка и налитое режутся по общему контуру, поэтому граница налитого
@@ -651,6 +664,10 @@ private fun PourBar(fraction: Float, pace: () -> Float, over: Boolean, modifier:
         val paceX = size.width * pace()
         clipPath(outline) {
             drawRect(track, topLeft = Offset(0f, top), size = Size(size.width, barHeight))
+            if (zoneStart != null) {
+                val zoneX = size.width * zoneStart
+                drawRect(zone, topLeft = Offset(zoneX, top), size = Size(size.width - zoneX, barHeight))
+            }
             drawRect(fill, topLeft = Offset(0f, top), size = Size(size.width * fraction, barHeight))
         }
         val markWidth = POUR_MARK_WIDTH.toPx()
@@ -667,9 +684,21 @@ private fun PourBar(fraction: Float, pace: () -> Float, over: Boolean, modifier:
 /**
  * Крупное число табло: вес или время. Забирает оставшуюся высоту, но не больше нужного: в невысокой левой
  * колонке альбомной раскладки оно ужимается, а подписи под ним остаются видны.
+ *
+ * [room] — вторая цифра справа, поменьше и в оттенке зоны полосы: сколько ещё можно налить до верха диапазона.
+ * Она есть только внутри зоны, поэтому появляется и уходит плавно, раздвигая строку; сами числа не анимируются.
  */
 @Composable
-private fun ColumnScope.BigReading(text: String, unitSymbol: String?, color: Color, slashedZero: Boolean) {
+private fun ColumnScope.BigReading(
+    text: String,
+    unitSymbol: String?,
+    color: Color,
+    slashedZero: Boolean,
+    room: String? = null,
+) {
+    // Пока вторая цифра уходит, показывает последнее значение.
+    var lastRoom by remember { mutableStateOf(room.orEmpty()) }
+    if (room != null) lastRoom = room
     Row(
         modifier = Modifier.fillMaxWidth().weight(1f, fill = false).padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.Center,
@@ -691,8 +720,27 @@ private fun ColumnScope.BigReading(text: String, unitSymbol: String?, color: Col
                 modifier = Modifier.alignByBaseline().padding(start = 8.dp),
             )
         }
+        // Вне автоподбора крупного числа: при нехватке места ужимается оно, а не вторая цифра.
+        AnimatedVisibility(visible = room != null, modifier = Modifier.alignByBaseline()) {
+            Text(
+                lastRoom,
+                style = DigitsTextStyle.withSlashedZero(slashedZero),
+                color = MaterialTheme.colorScheme.zoneText(),
+                maxLines = 1,
+                softWrap = false,
+                modifier = Modifier.padding(start = ROOM_GAP),
+            )
+        }
     }
 }
+
+/** Отступ второй цифры табло от единицы крупного числа. */
+private val ROOM_GAP = 16.dp
+
+/** Зона диапазона на дорожке полосы налива и вторая цифра табло — одна пара оттенков, отдельная от налитого. */
+private fun ColorScheme.zoneTrack(): Color = tertiaryContainer
+
+private fun ColorScheme.zoneText(): Color = tertiary
 
 @Composable
 private fun BoardCaption(text: String) {

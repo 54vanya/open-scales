@@ -359,4 +359,64 @@ class RecipeDraftTest {
     }
 
     // endregion
+
+    // region диапазон воды
+
+    private fun pour(key: Long, target: String, max: String = "") =
+        DraftItem.Step(key, title = "s$key", duration = "030", targetG = target, targetMaxG = max)
+
+    private fun maxErrors(vararg items: DraftItem) =
+        validate(draft(*items)).filterIsInstance<DraftError.Field>().filter { it.field == DraftField.TARGET_MAX }
+
+    @Test
+    fun `copy keeps the range of the bloom`() {
+        val bloom = hoffmannCopy.items[0] as DraftItem.Step
+        assertEquals("30", bloom.targetG)
+        assertEquals("45", bloom.targetMaxG)
+        assertEquals(45, (hoffmannCopy.toRecipe().items[0] as RecipeItem.Step).targetMaxG)
+        // Прибавки — от нижней границы.
+        assertEquals(listOf(30, 120, 100), hoffmannCopy.increments().values.toList())
+    }
+
+    @Test
+    fun `pour without a maximum is a fixed target`() {
+        val recipe = draft(pour(0, "150")).toRecipe()
+        assertNull((recipe.items[0] as RecipeItem.Step).targetMaxG)
+    }
+
+    @Test
+    fun `duplicating a range shifts both bounds`() {
+        val copy = draft(pour(0, "30", "45"), pour(1, "150")).duplicate(0, 9).items[1] as DraftItem.Step
+        assertEquals("60", copy.targetG)
+        assertEquals("75", copy.targetMaxG)
+    }
+
+    @Test
+    fun `maximum must be above the water of the step`() {
+        assertEquals(
+            listOf(DraftError.Field(0, DraftField.TARGET_MAX, DraftProblem.MAX_NOT_ABOVE_TARGET, 30)),
+            maxErrors(pour(0, "30", "30"), pour(1, "150")),
+        )
+        assertEquals(DraftProblem.ZERO, maxErrors(pour(0, "30", "0"), pour(1, "150")).single().problem)
+    }
+
+    @Test
+    fun `maximum must not pass the next target of the part`() {
+        assertEquals(
+            listOf(DraftError.Field(0, DraftField.TARGET_MAX, DraftProblem.MAX_ABOVE_NEXT, 150)),
+            maxErrors(pour(0, "30", "160"), step(5), pour(1, "150")),
+        )
+        assertTrue(maxErrors(pour(0, "30", "150"), pour(1, "150")).isEmpty())
+    }
+
+    @Test
+    fun `last pour of a part has no range`() {
+        val last = DraftError.Field(1, DraftField.TARGET_MAX, DraftProblem.MAX_ON_LAST)
+        assertEquals(listOf(last), maxErrors(pour(0, "30"), pour(1, "150", "180")))
+        // Пролив после шага «Тара» — уже другая часть.
+        val tare = DraftItem.Step(7, title = "t", duration = "010", kind = StepKind.TARE)
+        assertEquals(listOf(last), maxErrors(pour(1, "150", "180"), tare, pour(2, "200")))
+    }
+
+    // endregion
 }

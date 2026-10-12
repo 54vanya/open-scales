@@ -257,4 +257,77 @@ class RecipeTest {
     }
 
     // endregion
+
+    // region диапазон цели
+
+    private fun ranged(vararg steps: RecipeItem.Step) = Recipe("x", Text.Plain("x"), 15, null, steps.toList())
+
+    private fun pour(target: Int, max: Int? = null) = RecipeItem.Step(Text.Plain("s"), 10, targetG = target, targetMaxG = max)
+
+    @Test
+    fun `range in the middle of a part is a valid recipe`() {
+        val recipe = ranged(pour(30, 45), pour(150))
+        assertEquals(45.0, recipe.maxTargetG(0, 15.0)!!, 1e-9)
+        // У шага с одной целью верхняя граница — она же.
+        assertEquals(150.0, recipe.maxTargetG(1, 15.0)!!, 1e-9)
+        // Диапазон может дойти ровно до следующего рубежа.
+        ranged(pour(30, 150), pour(150))
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `range on the last target of a part is rejected`() {
+        ranged(pour(30), pour(150, 180))
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `range above the next target is rejected`() {
+        ranged(pour(30, 160), pour(150))
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `range before a tare is the last of its part`() {
+        Recipe("x", Text.Plain("x"), 15, null, listOf(pour(30, 45), step(tare = true), pour(150)))
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `range must be above the target`() {
+        pour(30, 30)
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `range needs a target`() {
+        RecipeItem.Step(Text.Plain("s"), 10, targetMaxG = 45)
+    }
+
+    @Test
+    fun `range scales with the dose and leaves the totals alone`() {
+        assertEquals(30.8, hoffman.scaled(30, 15.4), 1e-9)
+        assertEquals(46.2, hoffman.maxTargetG(0, 15.4)!!, 1e-9)
+        assertEquals("31–46", formatStepTarget(30.8, 46.2, WeightUnit.GRAM))
+        assertEquals("1.06–1.59", formatStepTarget(30.0, 45.0, WeightUnit.OUNCE))
+        assertEquals("150", formatStepTarget(150.0, 150.0, WeightUnit.GRAM))
+        // Рубежи для шагов ниже и итог воды — по нижней границе, как без диапазона.
+        assertEquals(listOf(30, 150, 250), hoffman.targetsG(15.0).rounded())
+        assertEquals(250.0, hoffman.totalWaterG(15.0), 1e-9)
+        assertEquals(250.0, hoffman.finalTargetG(15.0)!!, 1e-9)
+    }
+
+    /** Значения шагов встроенного рецепта с его диапазоном цветения: «0 (30–45)». */
+    private fun showRecipe(weight: Double, mode: StepWeightMode) =
+        PourDistribution.values(hoffman, 15.0, { weight }, mode).toSortedMap().values.map {
+            formatStepWeight(it.grams, WeightUnit.GRAM) + " (" + formatStepTarget(it.targetG, it.maxG, WeightUnit.GRAM) + ")"
+        }
+
+    @Test
+    fun `range step is left until its minimum and poured up to its maximum`() {
+        assertEquals(listOf("0 (30–45)", "110 (150)", "100 (250)"), showRecipe(40.0, StepWeightMode.REMAINING))
+        assertEquals(listOf("40 (30–45)", "40 (150)", "150 (250)"), showRecipe(40.0, StepWeightMode.POURED))
+        assertEquals(listOf("0 (30–45)", "80 (150)", "100 (250)"), showRecipe(70.0, StepWeightMode.REMAINING))
+        assertEquals(listOf("45 (30–45)", "70 (150)", "150 (250)"), showRecipe(70.0, StepWeightMode.POURED))
+        assertEquals(listOf("0 (30–45)", "0 (150)", "−10 (250)"), showRecipe(260.0, StepWeightMode.REMAINING))
+        assertEquals(listOf("45 (30–45)", "150 (150)", "260 (250)"), showRecipe(260.0, StepWeightMode.POURED))
+        assertEquals(listOf("0 (30–45)", "30 (150)", "150 (250)"), showRecipe(0.0, StepWeightMode.POURED))
+    }
+
+    // endregion
 }

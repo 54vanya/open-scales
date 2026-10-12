@@ -124,4 +124,67 @@ class PourFocusTest {
     fun `second pour follows once its time starts`() {
         assertEquals(5, focus(150.0, 75).itemIndex)
     }
+
+    // region диапазон: цветение 30–45 г, идёт «Цветение» (0:05)
+
+    @Test
+    fun `below the range counts down to its minimum`() {
+        val f = focus(20.0, 5)
+        assertEquals(10.0, f.leftG, 1e-9)
+        assertEquals(45.0, f.maxG, 1e-9)
+        assertEquals(TargetState.BELOW, f.state)
+        assertEquals(null, f.roomG)
+    }
+
+    @Test
+    fun `just below the range is already a hit, without the room`() {
+        val f = focus(29.5, 5)
+        assertEquals(0.5, f.leftG, 1e-9)
+        assertEquals(TargetState.AT, f.state)
+        assertEquals(null, f.roomG)
+    }
+
+    @Test
+    fun `inside the range nothing is left and the room shrinks to its maximum`() {
+        for ((weight, room) in listOf(30.0 to 15.0, 38.0 to 7.0, 45.0 to 0.0)) {
+            val f = focus(weight, 5)
+            assertEquals(0.0, f.leftG, 1e-9)
+            assertEquals(TargetState.AT, f.state)
+            assertEquals(room, f.roomG!!, 1e-9)
+        }
+    }
+
+    @Test
+    fun `above the range is an overpour counted from its maximum`() {
+        val f = focus(50.0, 5)
+        assertEquals(-5.0, f.leftG, 1e-9)
+        assertEquals(TargetState.OVER, f.state)
+        assertEquals(null, f.roomG)
+        // В пределах 1 г за верхней границей — ещё «попал».
+        assertEquals(TargetState.AT, focus(46.0, 5).state)
+    }
+
+    @Test
+    fun `pour bar of a range runs to its maximum with the zone marked`() {
+        assertEquals(2f / 3, focus(15.0, 5).zoneStart!!, 1e-6f)
+        assertEquals(1f / 3, focus(15.0, 5).fraction, 1e-6f)
+        assertEquals(37.5f / 45, focus(37.5, 5).fraction, 1e-6f)
+        assertEquals(1f, focus(50.0, 5).fraction, 1e-6f)
+        // Идеальный уровень идёт к нижней границе: половина шага — треть полосы, конец шага — начало зоны.
+        assertEquals(1f / 3, focus(15.0, 6).paceFraction(timeline, 6.0), 1e-6f)
+        assertEquals(2f / 3, focus(30.0, 12).paceFraction(timeline, 12.0), 1e-6f)
+    }
+
+    @Test
+    fun `step below a range counts from its minimum and has no zone`() {
+        val f = focus(40.0, 50)
+        assertEquals(4, f.itemIndex)
+        assertEquals(110.0, f.leftG, 1e-9)
+        assertEquals(30.0, f.previousG, 1e-9)
+        assertEquals(null, f.zoneStart)
+        assertEquals(null, f.roomG)
+        assertEquals(0.5f, focus(90.0, 50).fraction, 1e-6f)
+    }
+
+    // endregion
 }

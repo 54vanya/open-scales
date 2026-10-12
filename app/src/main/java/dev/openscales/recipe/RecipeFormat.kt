@@ -36,7 +36,10 @@ object RecipeFormat {
             description = recipe.description?.plain(),
             items = recipe.items.map { item ->
                 when (item) {
-                    is RecipeItem.Step -> ItemDto.Step(item.title.plain(), item.durationS, item.targetG, item.note?.plain(), tare = item.tare)
+                    is RecipeItem.Step -> ItemDto.Step(
+                        item.title.plain(), item.durationS, item.targetG, item.note?.plain(), tare = item.tare,
+                        targetMaxG = item.targetMaxG,
+                    )
                     is RecipeItem.Hint -> ItemDto.Hint(item.text.plain())
                 }
             },
@@ -60,6 +63,7 @@ object RecipeFormat {
                         is ItemDto.Step -> RecipeItem.Step(
                             Text.Plain(item.title), item.durationS, item.note?.let { Text.Plain(it) }, item.targetG,
                             item.tare,
+                            item.targetMaxG,
                         )
                         is ItemDto.Hint -> RecipeItem.Hint(Text.Plain(item.text))
                     }
@@ -103,6 +107,9 @@ object RecipeFormat {
             // не пишется.
             val showTime: Boolean = false,
             val tare: Boolean = false,
+            // Верхняя граница шага с диапазоном. Версию формата не меняет: приложение без диапазонов поле не читает
+            // и варит по `targetG` — рецепт остаётся верным.
+            val targetMaxG: Int? = null,
         ) : ItemDto
 
         @Serializable

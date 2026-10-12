@@ -113,4 +113,40 @@ class RecipeFormatTest {
         assertNull(RecipeFormat.decode(RecipeFormat.encode(recipe).replace("\"targetG\": 250", "\"targetG\": 20")))
         assertNull(RecipeFormat.decode(RecipeFormat.encode(recipe).replace("\"doseG\": 15", "\"doseG\": 0")))
     }
+
+    // region диапазон цели
+
+    private val ranged = recipe.copy(
+        items = listOf(
+            RecipeItem.Step(Text.Plain("Цветение"), 12, targetG = 30, targetMaxG = 45),
+            RecipeItem.Step(Text.Plain("Налейте"), 30, targetG = 250),
+        ),
+    )
+
+    @Test
+    fun `range round trip keeps the format version`() {
+        val text = RecipeFormat.encode(ranged)
+        assertTrue(text, text.contains("\"targetMaxG\": 45"))
+        assertTrue(text, text.contains("\"format\": 1"))
+        assertEquals(ranged, RecipeFormat.decode(text))
+    }
+
+    @Test
+    fun `step without a range has no maximum in the document`() {
+        assertTrue(!RecipeFormat.encode(recipe).contains("targetMaxG"))
+    }
+
+    @Test
+    fun `document with a wrong range is not a recipe`() {
+        fun doc(bloomMax: Int) = """
+            { "format": 1, "id": "r", "title": "T", "category": "v60", "doseG": 15,
+              "items": [ { "type": "step", "title": "B", "durationS": 12, "targetG": 30, "targetMaxG": $bloomMax },
+                         { "type": "step", "title": "P", "durationS": 30, "targetG": 150 } ] }
+        """
+        assertEquals(45, (RecipeFormat.decode(doc(45))!!.items[0] as RecipeItem.Step).targetMaxG)
+        assertNull(RecipeFormat.decode(doc(160)))
+        assertNull(RecipeFormat.decode(doc(30)))
+    }
+
+    // endregion
 }

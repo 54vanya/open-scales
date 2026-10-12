@@ -335,6 +335,8 @@
     <string name="editor_duration_hint">For example, 1:30</string>
     <string name="editor_field_target">Water by the end</string>
     <string name="editor_target_hint">How much should be poured in total by the end of the step</string>
+    <string name="editor_field_target_max">Up to</string>
+    <string name="editor_target_max_hint">Optional: an upper bound if the step allows a range of water</string>
     <string name="editor_field_note">How to do it</string>
     <string name="editor_show_time">Countdown on the board</string>
     <string name="editor_field_hint_text">Text</string>
@@ -363,6 +365,9 @@
     <string name="editor_error_duration">Up to 59 seconds, like 1:30</string>
     <string name="editor_error_zero">Can’t be zero</string>
     <string name="editor_error_below_previous">Already %1$s above — at least that here</string>
+    <string name="editor_error_max_not_above">Must be more than %1$s</string>
+    <string name="editor_error_max_above_next">The next target is %1$s — no more than that here</string>
+    <string name="editor_error_max_last">The last pour can\'t have a range</string>
     <string name="editor_error_no_steps">Add at least one step</string>
     <string name="editor_save_failed">Couldn’t save the recipe</string>
 

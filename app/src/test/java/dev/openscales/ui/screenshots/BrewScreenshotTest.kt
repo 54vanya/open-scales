@@ -39,12 +39,19 @@ class BrewScreenshotTest : ScreenshotTest() {
         seconds = seconds,
     )
 
-    private fun steps(name: String, recipe: Recipe, ui: BrewUi, swap: Boolean = false) = snapshot(name) {
+    private fun steps(
+        name: String,
+        recipe: Recipe,
+        ui: BrewUi,
+        swap: Boolean = false,
+        mode: StepWeightMode = StepWeightMode.REMAINING,
+        dark: Boolean = false,
+    ) = snapshot(name, dark) {
         StepsScreen(
             recipe = recipe,
             timeline = RecipeTimeline(recipe),
             ui = ui,
-            mode = StepWeightMode.REMAINING,
+            mode = mode,
             snackbarHostState = SnackbarHostState(),
             onBack = {}, onTare = {}, onStart = {}, onPause = {}, onStop = {},
             onSwap = if (swap) ({}) else null,
@@ -117,6 +124,44 @@ class BrewScreenshotTest : ScreenshotTest() {
         )
         steps("brew_finished_holding", onePour, ui(BrewPhase.FINISHED, 170f, seconds = 105).copy(holdWater = true))
     }
+
+    // region Шаг с диапазоном: цветение Хоффмана 30–45 г
+
+    private fun bloom(weight: Float, seconds: Int = 8) = ui(BrewPhase.RUNNING, weight, seconds)
+
+    /** До зоны: крупно остаток до нижней границы, участок зоны на полосе ещё пуст. */
+    @Test
+    fun rangeBelow() = steps("brew_range_below", BuiltInRecipes.hoffmannV60, bloom(20f))
+
+    /** Внутри зоны: крупно ноль акцентом, справа — сколько ещё можно до верхней границы. */
+    @Test
+    fun rangeInside() = steps("brew_range_inside", BuiltInRecipes.hoffmannV60, bloom(38f))
+
+    /** Перелив за верхнюю границу: минус от неё цветом ошибки, второй цифры нет. */
+    @Test
+    fun rangeOver() = steps("brew_range_over", BuiltInRecipes.hoffmannV60, bloom(50f))
+
+    /** «Сколько налито»: вес и обе границы в подписи, второй цифры нет. */
+    @Test
+    fun rangeInsidePoured() =
+        steps("brew_range_inside_poured", BuiltInRecipes.hoffmannV60, bloom(38f), mode = StepWeightMode.POURED)
+
+    /** Вода улеглась в зоне: крупно время «Взболтайте», в углу ноль акцентом без второй цифры. */
+    @Test
+    fun rangeSettled() = steps("brew_range_settled", BuiltInRecipes.hoffmannV60, bloom(40f, seconds = 14))
+
+    @Test
+    fun rangeInsideDark() = steps("brew_range_inside_dark", BuiltInRecipes.hoffmannV60, bloom(38f), dark = true)
+
+    @Test
+    @Config(qualifiers = NARROW)
+    fun rangeInsideNarrow() = steps("brew_range_inside_narrow", BuiltInRecipes.hoffmannV60, bloom(38f))
+
+    @Test
+    @Config(qualifiers = LANDSCAPE)
+    fun rangeInsideLandscape() = steps("brew_range_inside_landscape", BuiltInRecipes.hoffmannV60, bloom(38f))
+
+    // endregion
 
     // region Альбомная ориентация: кнопки столбцом у правого края
 

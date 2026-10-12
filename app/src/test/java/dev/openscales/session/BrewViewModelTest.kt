@@ -141,10 +141,25 @@ class BrewViewModelTest {
         weigh(env, 27.0)
         settle(3_000)
         assertTrue(env.holds())
-        // Перелив на 6 г: «осталось» меньше нуля — отпускает.
+        // 36 г — внутри зоны цветения 30–45 г: осталось ноль — отпускает.
         weigh(env, 36.0)
         settle(1_500)
         assertFalse(env.holds())
+    }
+
+    @Test
+    fun `water inside or above the bloom range lets the wait step count down`() = runTest {
+        for (grams in listOf(40.0, 50.0)) {
+            val env = readyToBrew()
+            start(env)
+            weigh(env, 2.0)
+            // 0:14 — «Взболтайте»: цветение встало на 40 г (в зоне) или на 50 г (перелив за 45 г).
+            settle(14_000)
+            weigh(env, grams)
+            assertTrue(env.holds())
+            settle(1_500)
+            assertFalse(env.holds())
+        }
     }
 
     @Test

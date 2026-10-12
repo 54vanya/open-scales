@@ -16,6 +16,8 @@ sealed interface RecipeItem {
      * У шагов без воды (покачать, подождать) его нет.
      * [tare] — шаг «Тара»: с него начинается новая часть рецепта, рубежи которой считаются от нуля тары на этом шаге
      * (снять аэропресс и разбавить концентрат в чашке). Цели и крупного времени у него нет.
+     * [targetMaxG] — верхняя граница цели, тоже накопительная: шаг с диапазоном «налить от [targetG] до
+     * [targetMaxG]» (цветение ×2–×3). Рубеж шага для шагов ниже — по-прежнему [targetG].
      */
     data class Step(
         val title: Text,
@@ -23,10 +25,12 @@ sealed interface RecipeItem {
         val note: Text? = null,
         val targetG: Int? = null,
         val tare: Boolean = false,
+        val targetMaxG: Int? = null,
     ) : RecipeItem {
         init {
             require(durationS > 0) { "step duration must be positive" }
             require(!tare || targetG == null) { "tare step has no target" }
+            require(targetMaxG == null || targetG != null && targetMaxG > targetG) { "target range must be above the target" }
         }
 
         /**
@@ -74,6 +78,15 @@ data class Recipe(
         require(targetsByPart(defaultDoseG.toDouble()).all { part -> part.zipWithNext().all { (a, b) -> a.second <= b.second } }) {
             "step targets must not decrease within a part"
         }
+        // Диапазон не заходит за следующий рубеж части и не стоит у последнего: итог воды — одно число.
+        require(
+            targetsByPart(defaultDoseG.toDouble()).all { part ->
+                part.indices.all { n ->
+                    val max = (items[part[n].first] as RecipeItem.Step).targetMaxG
+                    max == null || n < part.lastIndex && max <= part[n + 1].second
+                }
+            },
+        ) { "target range must end before the next target of the part" }
     }
 
     /** Рубежи шагов при дозе по умолчанию сверху вниз, только у шагов с целью (все части подряд). */
@@ -84,6 +97,13 @@ data class Recipe(
 
     /** Рубеж [targetG] (при дозе по умолчанию), пересчитанный на дозу [doseG]. */
     fun scaled(targetG: Int, doseG: Double): Double = targetG * doseG / defaultDoseG
+
+    /**
+     * Верхняя граница цели шага [index] при дозе [doseG]: у шага с диапазоном — его максимум, у остальных — сама
+     * цель. `null` — у элемента нет цели.
+     */
+    fun maxTargetG(index: Int, doseG: Double): Double? =
+        (items[index] as? RecipeItem.Step)?.let { it.targetMaxG ?: it.targetG }?.let { scaled(it, doseG) }
 
     /** Цели шагов по частям при дозе [doseG]: индекс элемента и накопительный от нуля части рубеж. */
     fun targetsByPart(doseG: Double): List<List<Pair<Int, Double>>> {

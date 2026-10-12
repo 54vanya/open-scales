@@ -136,4 +136,13 @@ class BuiltInRecipesTest {
     fun `kasuya at 18 grams`() {
         assertEquals(listOf(54.0, 108.0, 162.0, 216.0, 270.0), BuiltInRecipes.kasuya46.targetsG(18.0).map { Math.round(it * 1e6) / 1e6 })
     }
+
+    @Test
+    fun `only the hoffmann bloom is a range, two to three doses`() {
+        val ranged = BuiltInRecipes.all.flatMap { r -> r.items.filterIsInstance<RecipeItem.Step>().filter { it.targetMaxG != null }.map { r.id to it } }
+        assertEquals(listOf("builtin:hoffmann-v60"), ranged.map { it.first })
+        val bloom = ranged.single().second
+        assertEquals(30, bloom.targetG)
+        assertEquals(45, bloom.targetMaxG)
+    }
 }

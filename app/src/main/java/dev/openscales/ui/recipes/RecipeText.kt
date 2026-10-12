@@ -9,6 +9,7 @@ import dev.openscales.recipe.Recipe
 import dev.openscales.recipe.RecipeCategory
 import dev.openscales.recipe.RecipeTimeline
 import dev.openscales.recipe.Text
+import dev.openscales.recipe.formatStepTarget
 import dev.openscales.recipe.formatStepWeight
 import dev.openscales.ui.components.formatTime
 import dev.openscales.ui.components.symbolRes
@@ -41,6 +42,11 @@ fun RecipeCategory.titleRes(): Int = when (this) {
 @Composable
 fun stepWeightWithUnit(grams: Double, unit: WeightUnit): String =
     stringResource(R.string.value_with_unit, formatStepWeight(grams, unit), stringResource(unit.symbolRes()))
+
+/** Цель шага с единицей весов: «150 г», у шага с диапазоном — «30–45 г». */
+@Composable
+fun stepTargetWithUnit(targetG: Double, maxG: Double, unit: WeightUnit): String =
+    stringResource(R.string.value_with_unit, formatStepTarget(targetG, maxG, unit), stringResource(unit.symbolRes()))
 
 /** «15 г · 250 г · 3:30»: доза по умолчанию, вода при ней и длительность шагов. */
 @Composable

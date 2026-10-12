@@ -84,6 +84,30 @@ class EditorScreenshotTest : ScreenshotTest() {
         RecipeEditorScreen(ui = EditorUi(draft, expanded = setOf(5L)), isNew = false, actions = NoActions, listState = listState)
     }
 
+    /** Раскрытое цветение копии Хоффмана: вода 30 г и «Можно до» 45 г. */
+    @Test
+    fun editorRangeStep() = snapshot("editor_range_step") {
+        val listState = androidx.compose.foundation.lazy.rememberLazyListState(initialFirstVisibleItemIndex = 1)
+        RecipeEditorScreen(
+            ui = EditorUi(hoffmannCopy(), expanded = setOf(0L)), isNew = false, actions = NoActions, listState = listState,
+        )
+    }
+
+    /** Максимум пролива больше следующего рубежа: поле «Можно до» с ошибкой, у свёрнутого шага ниже — его рубеж. */
+    @Test
+    fun editorRangeError() = snapshot("editor_range_error") {
+        val draft = RecipeDraft(
+            id = "user:new",
+            title = "Мой V60",
+            items = listOf(
+                DraftItem.Step(0, title = "Цветение", duration = "012", targetG = "30", targetMaxG = "160"),
+                DraftItem.Step(1, title = "Налейте", targetG = "150"),
+            ),
+        )
+        val listState = androidx.compose.foundation.lazy.rememberLazyListState(initialFirstVisibleItemIndex = 1)
+        RecipeEditorScreen(ui = EditorUi(draft, expanded = setOf(0L), showErrors = true), isNew = true, actions = NoActions, listState = listState)
+    }
+
     /** Меню «+» с заготовками. */
     @Test
     fun editorAddMenu() = screen(

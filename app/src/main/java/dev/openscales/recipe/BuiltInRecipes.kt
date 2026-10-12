@@ -15,7 +15,10 @@ object BuiltInRecipes {
         defaultDoseG = 15,
         description = Text.Res(R.string.recipe_hoffmann_description),
         items = listOf(
-            RecipeItem.Step(Text.Res(R.string.recipe_step_bloom), 12, Text.Res(R.string.recipe_note_pour_slowly), 30),
+            // Цветение — от двух до трёх доз воды: диапазон, а не точная цель.
+            RecipeItem.Step(
+                Text.Res(R.string.recipe_step_bloom), 12, Text.Res(R.string.recipe_note_pour_slowly), 30, targetMaxG = 45,
+            ),
             RecipeItem.Hint(Text.Res(R.string.recipe_hint_bloom_total)),
             RecipeItem.Step(Text.Res(R.string.recipe_step_swirl), 5),
             RecipeItem.Step(Text.Res(R.string.recipe_step_wait), 28),
