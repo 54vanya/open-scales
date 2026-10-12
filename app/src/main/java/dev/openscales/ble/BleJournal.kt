@@ -37,20 +37,23 @@ class BleJournal(
 
     private val buffer = ArrayDeque<Entry>(capacity)
     private val notableBuffer = ArrayDeque<Entry>(notableCapacity)
-    private val _entries = MutableStateFlow<List<Entry>>(emptyList())
-    private val _notable = MutableStateFlow<List<Entry>>(emptyList())
-    val entries: StateFlow<List<Entry>> = _entries.asStateFlow()
-    val notable: StateFlow<List<Entry>> = _notable.asStateFlow()
+    private val _changes = MutableStateFlow(0)
+
+    /**
+     * Счётчик изменений журнала. Сам журнал наружу не публикуется: копия буфера на каждый кадр нагружала бы
+     * главный поток, за которым журнал и следит. Снимок ([entries], [notable]) берёт тот, кто его показывает.
+     */
+    val changes: StateFlow<Int> = _changes.asStateFlow()
+
+    val entries: List<Entry> get() = synchronized(buffer) { buffer.toList() }
+    val notable: List<Entry> get() = synchronized(buffer) { notableBuffer.toList() }
 
     fun add(kind: Kind, text: String, notable: Boolean = kind.notableByDefault) {
         synchronized(buffer) {
             val entry = Entry(clock(), kind, text)
             buffer.addBounded(entry, capacity)
-            _entries.value = buffer.toList()
-            if (notable) {
-                notableBuffer.addBounded(entry, notableCapacity)
-                _notable.value = notableBuffer.toList()
-            }
+            if (notable) notableBuffer.addBounded(entry, notableCapacity)
+            _changes.value++
         }
     }
 
@@ -58,8 +61,7 @@ class BleJournal(
         synchronized(buffer) {
             buffer.clear()
             notableBuffer.clear()
-            _entries.value = emptyList()
-            _notable.value = emptyList()
+            _changes.value++
         }
     }
 
@@ -67,10 +69,10 @@ class BleJournal(
         appendLine(header)
         appendLine()
         appendLine("== Notable events ==")
-        notable.value.forEach { appendLine(format(it)) }
+        notable.forEach { appendLine(format(it)) }
         appendLine()
         appendLine("== Full log ==")
-        entries.value.forEach { appendLine(format(it)) }
+        entries.forEach { appendLine(format(it)) }
     }
 
     private fun ArrayDeque<Entry>.addBounded(entry: Entry, limit: Int) {

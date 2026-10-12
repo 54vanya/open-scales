@@ -1,8 +1,10 @@
 package dev.openscales.session
 
 import dev.openscales.ble.BondState
+import dev.openscales.ble.TransportEvent
 import dev.openscales.protocol.Cmd
 import dev.openscales.protocol.Frame
+import dev.openscales.protocol.FrameCodec
 import dev.openscales.protocol.GattIds
 import dev.openscales.protocol.LegacyCmd
 import dev.openscales.protocol.ScaleModel
@@ -318,6 +320,44 @@ class ScaleSessionTest {
         assertEquals(1, t.writesOf(Cmd.DISCONNECT).size)
         assertEquals(EndReason.USER, s.awaitEnd())
         assertTrue(t.closeCount > 0)
+    }
+
+    @Test
+    fun `rejected factory reset keeps the session and reports the refusal`() = runTest {
+        val t = FakeBleTransport()
+        val (s, _) = session(t, ScaleModel.BASIC3)
+        s.start()
+        settle()
+        t.rejectedWrites += Cmd.FACTORY_RESET
+        val result = runCatching { s.factoryReset() }
+        settle(5_000)
+        assertEquals(CommandException.Kind.REJECTED, (result.exceptionOrNull() as CommandException).kind)
+        assertTrue(s.state.value.isReady)
+    }
+
+    @Test
+    fun `rejected power off keeps the session`() = runTest {
+        val t = FakeBleTransport()
+        val (s, _) = session(t, ScaleModel.BASIC3)
+        s.start()
+        settle()
+        t.rejectedWrites += Cmd.POWER_OFF
+        assertTrue(runCatching { s.powerOff() }.isFailure)
+        settle(5_000)
+        assertTrue(s.state.value.isReady)
+    }
+
+    @Test
+    fun `reply split across two notifications is assembled`() = runTest {
+        val t = FakeBleTransport()
+        val (s, _) = session(t, ScaleModel.BASIC3)
+        s.start()
+        settle()
+        val frame = FrameCodec.encode(Frame.TYPE_READ, Cmd.DEVICE_NAME, "Black Mirror Kitchen".toByteArray())
+        t.events.tryEmit(TransportEvent.Notification(GattIds.NOTIFY_2025, frame.copyOfRange(0, 20)))
+        t.events.tryEmit(TransportEvent.Notification(GattIds.NOTIFY_2025, frame.copyOfRange(20, frame.size)))
+        settle()
+        assertEquals("Black Mirror Kitchen", s.state.value.name)
     }
 
     @Test

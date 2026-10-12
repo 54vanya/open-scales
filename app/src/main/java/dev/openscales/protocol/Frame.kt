@@ -54,16 +54,19 @@ object FrameCodec {
      * ищем `A5 5A`, читаем длину, отбрасываем кадры с невалидной длиной, на обрезанном кадре — стоп.
      * CRC не проверяется строго: оригинал только логирует несовпадение.
      */
-    fun split(data: ByteArray): List<Frame> {
+    fun split(data: ByteArray): List<Frame> = parse(data).first
+
+    /** Кадры и позиция, с которой начинается обрезанный кадр (`data.size`, если такого нет). */
+    internal fun parse(data: ByteArray): Pair<List<Frame>, Int> {
         val frames = mutableListOf<Frame>()
         var i = 0
         while (i < data.size - 1) {
             if (data.u8(i) == Frame.HEADER_0 && data.u8(i + 1) == Frame.HEADER_1) {
-                if (i + 6 > data.size) break
+                if (i + 6 > data.size) return frames to i
                 val len = (data.u8(i + 4) shl 8) or data.u8(i + 5)
                 if (len <= Frame.MAX_PAYLOAD) {
                     val end = i + len + Frame.OVERHEAD
-                    if (end > data.size) break
+                    if (end > data.size) return frames to i
                     frames += Frame(
                         type = data.u8(i + 2),
                         cmd = data.u8(i + 3),
@@ -75,13 +78,30 @@ object FrameCodec {
             }
             i++
         }
-        return frames
+        return frames to data.size
     }
 
     fun hasValidCrc(rawFrame: ByteArray): Boolean {
         if (rawFrame.size < Frame.OVERHEAD) return false
         val expected = (rawFrame.u8(rawFrame.size - 2) shl 8) or rawFrame.u8(rawFrame.size - 1)
         return Crc16.modbus(rawFrame, rawFrame.size - 2) == expected
+    }
+}
+
+/**
+ * Собирает кадры из потока уведомлений одного соединения: при маленьком MTU длинный ответ (имя, прошивка)
+ * приходит несколькими уведомлениями. Хвост обрезанного кадра ждёт продолжения; уведомление, которое само
+ * начинается с заголовка, — новый кадр, и несобранный хвост перед ним отбрасывается.
+ */
+class FrameAssembler {
+    private var rest = ByteArray(0)
+
+    fun feed(data: ByteArray): List<Frame> {
+        val startsFrame = data.size >= 2 && data.u8(0) == Frame.HEADER_0 && data.u8(1) == Frame.HEADER_1
+        val bytes = if (rest.isEmpty() || startsFrame) data else rest + data
+        val (frames, tail) = FrameCodec.parse(bytes)
+        rest = bytes.copyOfRange(tail, bytes.size)
+        return frames
     }
 }
 

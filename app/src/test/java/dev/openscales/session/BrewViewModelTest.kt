@@ -306,6 +306,18 @@ class BrewViewModelTest {
     }
 
     @Test
+    fun `start right after tare waits for the zero of that tare`() = runTest {
+        val env = readyToBrew()
+        env.brew.tare()
+        env.brew.startOrCancel()
+        settle(5_000)
+        assertEquals(BrewPhase.ARMED, env.brew.ui.value.phase)
+        weigh(env, 0.0)
+        weigh(env, 2.0)
+        assertEquals(BrewPhase.RUNNING, env.brew.ui.value.phase)
+    }
+
+    @Test
     fun `pressing again cancels waiting`() = runTest {
         val env = readyToBrew()
         env.brew.startOrCancel()

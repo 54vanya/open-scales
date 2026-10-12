@@ -39,7 +39,12 @@ class DataStoreSavedDeviceStore(context: Context) : SavedDeviceStore {
     }
 
     override suspend fun clear() {
-        store.edit { it.clear() }
+        // Файл общий с настройками приложения: стираем только свои ключи.
+        store.edit {
+            it.remove(ADDRESS)
+            it.remove(NAME)
+            it.remove(MODEL)
+        }
     }
 
     private companion object {

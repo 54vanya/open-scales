@@ -151,9 +151,13 @@ class ScaleRepository(
                 target = SavedDevice(target.address, ready.name ?: target.name, ready.model)
                 store.save(target)
             }
-            val reason = s.awaitEnd()
-            readyWatcher.cancel()
-            timerWatcher.cancel()
+            // И при отмене самого подключения (другие весы, «Забыть»): иначе наблюдатели висят на закрытой сессии.
+            val reason = try {
+                s.awaitEnd()
+            } finally {
+                readyWatcher.cancel()
+                timerWatcher.cancel()
+            }
             val last = s.state.value
 
             if (!willRetry(reason)) {

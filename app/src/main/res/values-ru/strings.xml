@@ -220,7 +220,6 @@
     <string name="recipe_step_bloom_second">Второе цветение</string>
     <string name="recipe_step_flip">Переверните</string>
     <string name="recipe_note_spiral_no_swirl">По спирали, не взбалтывайте</string>
-    <string name="recipe_note_no_swirl">Ещё 45 г по спирали, не взбалтывайте</string>
     <string name="recipe_note_energetic_coin">Энергично, мелкими кругами в центре</string>
     <string name="recipe_hint_drawdown_230">Пролив должен закончиться к 2:30</string>
     <string name="recipe_inverted_aeropress_title">Перевёрнутый аэропресс</string>
@@ -244,7 +243,7 @@
     <string name="recipe_kalita_title">Kalita Wave</string>
     <string name="recipe_kalita_description">Помол средне-мелкий. Вода около 96 °C.</string>
     <string name="recipe_note_spiral_slowly">Медленно по спирали</string>
-    <string name="recipe_note_pulses">Порциями по 25–50 г на светлые пятна</string>
+    <string name="recipe_note_pulses">Небольшими порциями на светлые пятна</string>
     <string name="recipe_chemex_title">Chemex</string>
     <string name="recipe_chemex_description">Помол средне-крупный. Вода около 96 °C. На 2–3 чашки.</string>
     <string name="recipe_note_stir_dry">Размешайте, чтобы не осталось сухих комков</string>
@@ -260,13 +259,13 @@
     <string name="journal_title">Журнал BLE</string>
     <!-- Иммерсия, чемпионские рецепты, сложность -->
     <string name="recipe_hoffmann_one_cup_title">V60 Хоффмана на одну чашку</string>
-    <string name="recipe_hoffmann_one_cup_description">Пять одинаковых проливов по 50 г. Помол средне-мелкий — как можно мельче без горечи. Вода: светлая обжарка — кипяток, средняя — 96 °C.</string>
+    <string name="recipe_hoffmann_one_cup_description">Пять одинаковых проливов. Помол средне-мелкий — как можно мельче без горечи. Вода: светлая обжарка — кипяток, средняя — 96 °C.</string>
     <string name="recipe_kasuya_switch_title">Гибрид Тэцу Касуи</string>
     <string name="recipe_kasuya_switch_description">Гибрид: сначала пролив с открытым клапаном, потом настаивание. Помол средне-мелкий. Вода 93 °C, для третьего пролива — около 75 °C. Слив дольше 3:00 — помол крупнее.</string>
     <string name="recipe_hoffmann_french_press_title">Френч-пресс Хоффмана</string>
     <string name="recipe_hoffmann_french_press_description">Долгий настой без прожима. Помол средне-крупный. Вода — кипяток. На 2 чашки.</string>
     <string name="recipe_wac2022_title">Джибби Литтл (WAC 2022)</string>
-    <string name="recipe_wac2022_description">Чемпион мира по аэропрессу 2022 (Австралия). Аэропресс перевёрнут. Вода 90 °C. После прожима разбавьте до 150 г.</string>
+    <string name="recipe_wac2022_description">Чемпион мира по аэропрессу 2022 (Австралия). Аэропресс перевёрнут. Вода 90 °C.</string>
     <string name="recipe_wac2019_title">Венделин ван Бюнник (WAC 2019)</string>
     <string name="recipe_wac2019_description">Чемпион мира по аэропрессу 2019 (Нидерланды). Много кофе, короткий настой, разбавление после прожима. Аэропресс перевёрнут. Вода 92 °C.</string>
     <string name="recipe_step_open_valve">Откройте клапан</string>
@@ -286,10 +285,10 @@
     <string name="recipe_note_press_all">До конца</string>
     <string name="recipe_hint_drawdown_300">Пролив должен закончиться к 3:00</string>
     <string name="recipe_hint_plunge_to_surface">Опустите поршень только до поверхности и медленно разлейте</string>
-    <string name="recipe_hint_dilute_150">Разбавьте горячей водой до 150 г</string>
     <string name="recipe_step_tare">Обнулите весы</string>
     <string name="recipe_step_dilute">Разбавьте</string>
     <string name="recipe_note_remove_aeropress">Снимите аэропресс, чашка остаётся на весах</string>
+    <string name="recipe_note_hot_water">Горячей водой</string>
     <string name="recipe_note_hot_water_to_taste">Горячей водой, по вкусу</string>
     <string name="recipe_group_french_press">Френч-пресс</string>
     <string name="difficulty_easy">Просто</string>
@@ -299,7 +298,7 @@
     <string name="recipe_wbrc2024_title">Мартин Вёльфль (WBrC 2024)</string>
     <string name="recipe_wbrc2024_description">Чемпион мира по заварке 2024 (Австрия). Четыре пролива — в 0:00, 0:40, 1:20 и 2:00, конец в 2:20–2:25. Помол средне-мелкий. Вода 93 °C. На соревнованиях — плоскодонная воронка Orea.</string>
     <string name="recipe_wbrc2022_title">Шерри Хсу (WBrC 2022)</string>
-    <string name="recipe_wbrc2022_description">Чемпион мира по заварке 2022 (Тайвань). Четыре пролива по 50 г каждые 30 секунд: первый — водой 70 °C, остальные — 95 °C. Помол средне-крупный. На соревнованиях — плоскодонная воронка Orea.</string>
+    <string name="recipe_wbrc2022_description">Чемпион мира по заварке 2022 (Тайвань). Четыре одинаковых пролива каждые 30 секунд: первый — водой 70 °C, остальные — 95 °C. Помол средне-крупный. На соревнованиях — плоскодонная воронка Orea.</string>
     <string name="recipe_fukahori_switch_title">Эми Фукахори (WBrC 2018)</string>
     <string name="recipe_fukahori_switch_description">Чемпион мира по заварке 2018 (Швейцария). Её простой рецепт для Switch из кофеен MAME. Помол средне-крупный.</string>
     <string name="recipe_note_water_70">Вода 70 °C</string>

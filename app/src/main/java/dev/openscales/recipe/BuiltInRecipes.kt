@@ -77,7 +77,7 @@ object BuiltInRecipes {
         "builtin:hedrick-one-and-done", R.string.recipe_hedrick_title, 15, R.string.recipe_hedrick_description,
         step(R.string.recipe_step_bloom, 6, 45, R.string.recipe_note_spiral_no_swirl),
         step(R.string.recipe_step_wait, 24),
-        step(R.string.recipe_step_bloom_second, 6, 90, R.string.recipe_note_no_swirl),
+        step(R.string.recipe_step_bloom_second, 6, 90, R.string.recipe_note_spiral_no_swirl),
         step(R.string.recipe_step_wait, 24),
         step(R.string.recipe_step_pour, 13, 225, R.string.recipe_note_energetic_coin),
         step(R.string.recipe_step_wait, 77),
@@ -192,6 +192,8 @@ object BuiltInRecipes {
     /**
      * Победитель World AeroPress Championship 2022 — Джибби Литтл (Австралия). Время размешивания и прожима
      * в источнике не заданы по секундам — взяты по описанию (35 мягких движений, прожим 1:40–2:10).
+     * Разбавление — отдельная часть рецепта после тары, как у ван Бюнника. В источнике напиток доливают до 150 г
+     * вместе с концентратом; рубеж 92 г — оценка долива: из 94 г воды при 18 г кофе выходит около 58 г концентрата.
      */
     val littleAeropress = recipe(
         "builtin:wac-2022-little", R.string.recipe_wac2022_title, 18,
@@ -202,7 +204,8 @@ object BuiltInRecipes {
         step(R.string.recipe_step_cap, 10, note = R.string.recipe_note_remove_air),
         step(R.string.recipe_step_flip, 10),
         step(R.string.recipe_step_press, 30, note = R.string.recipe_note_press_gently),
-        hint(R.string.recipe_hint_dilute_150),
+        tare(10, R.string.recipe_note_remove_aeropress),
+        step(R.string.recipe_step_dilute, 15, 92, R.string.recipe_note_hot_water),
         category = RecipeCategory.AEROPRESS,
         difficulty = Difficulty.MEDIUM,
     )

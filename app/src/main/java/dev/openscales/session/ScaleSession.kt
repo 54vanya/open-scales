@@ -6,6 +6,7 @@ import dev.openscales.ble.BleTransport
 import dev.openscales.ble.BondState
 import dev.openscales.ble.TransportEvent
 import dev.openscales.protocol.Cmd
+import dev.openscales.protocol.FrameAssembler
 import dev.openscales.protocol.FrameCodec
 import dev.openscales.protocol.GattIds
 import dev.openscales.protocol.LegacyCmd
@@ -70,6 +71,8 @@ class ScaleSession(
     private val queue = CommandQueue(scope) { bytes ->
         transport.write(GattIds.SERVICE_2025, GattIds.WRITE_2025, bytes)
     }
+
+    private val assembler = FrameAssembler()
 
     @Volatile private var legacy = false
     @Volatile private var protocolDataSeen = false
@@ -243,7 +246,7 @@ class ScaleSession(
             return
         }
         if (event.characteristic != GattIds.NOTIFY_2025) return
-        val frames = FrameCodec.split(event.value)
+        val frames = assembler.feed(event.value)
         if (frames.isNotEmpty()) protocolDataSeen = true
         for (frame in frames) {
             val message = MessageDecoder.decode(frame, _state.value.unit)
@@ -347,6 +350,8 @@ class ScaleSession(
         if (target == TimerState.RESET && !scaleTimerHasSomethingToReset()) return
         if (!awaitAck) {
             queue.write(Cmd.TIMER, byteArrayOf(target.code.toByte()), CommandQueue.Coalesce.TIMER, awaitAck = false)
+            // Подтверждения не ждём, но состояние таймера весов ведём: по нему решается, слать ли сброс.
+            applyTimerState(target)
             return
         }
         // Оптимистично: интерфейс меняется в момент нажатия, не дожидаясь BLE-обмена (~0.3–0.6 с).
@@ -447,14 +452,30 @@ class ScaleSession(
     /** Команда 0x1A перед удалением bond. */
     suspend fun forgetOnDevice() {
         if (!_state.value.isReady || legacy) return
-        deviceCommand(Cmd.FORGET_DEVICE)
+        try {
+            deviceCommand(Cmd.FORGET_DEVICE)
+        } catch (e: CommandException) {
+            // Весы забываются в любом случае: сессию закрывает вызывающий.
+        }
     }
 
-    /** Команды, после которых весы сами рвут связь: ждать подтверждения бессмысленно. */
+    /**
+     * Команды, после которых весы сами рвут связь: ждать подтверждения бессмысленно. Если же весы команду
+     * отклонили или запись не ушла, сессия остаётся, а ошибка доходит до вызывающего.
+     */
     private suspend fun deviceCommand(cmd: Int) {
         requireReady()
         pendingEndReason = EndReason.DEVICE_COMMAND
-        runCatching { queue.write(cmd, awaitAck = cmd == Cmd.FACTORY_RESET) }
+        try {
+            // «Забыть» ответа не ждёт: сессию сразу закрывает вызывающий.
+            queue.write(cmd, awaitAck = cmd != Cmd.FORGET_DEVICE)
+        } catch (e: CommandException) {
+            val notDone = e.kind == CommandException.Kind.REJECTED || e.kind == CommandException.Kind.TRANSPORT
+            if (notDone && !ended.isCompleted) {
+                pendingEndReason = null
+                throw e
+            }
+        }
         scope.launch {
             delay(DISCONNECT_GRACE_MS)
             finish(EndReason.DEVICE_COMMAND, ConnectionPhase.DISCONNECTED, null)

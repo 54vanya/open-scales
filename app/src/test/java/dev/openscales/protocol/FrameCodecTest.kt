@@ -58,6 +58,22 @@ class FrameCodecTest {
     }
 
     @Test
+    fun `assembler joins a frame split across notifications`() {
+        val frame = FrameCodec.encodeWrite(Cmd.DEVICE_NAME, "Black Mirror Kitchen".toByteArray())
+        val assembler = FrameAssembler()
+        assertTrue(assembler.feed(frame.copyOfRange(0, 20)).isEmpty())
+        val frames = assembler.feed(frame.copyOfRange(20, frame.size))
+        assertEquals("Black Mirror Kitchen", frames.single().payload.decodeToString())
+    }
+
+    @Test
+    fun `assembler drops an unfinished tail when a new frame starts`() {
+        val assembler = FrameAssembler()
+        assertTrue(assembler.feed(FrameCodec.encodeRead(Cmd.DEVICE_NAME).copyOfRange(0, 5)).isEmpty())
+        assertEquals(Cmd.BATTERY, assembler.feed(FrameCodec.encodeRead(Cmd.BATTERY)).single().cmd)
+    }
+
+    @Test
     fun `absurd length is ignored`() {
         val frames = FrameCodec.split(bytes(0xA5, 0x5A, 0x02, 0x01, 0x10, 0x00, 0, 0, 0, 0))
         assertTrue(frames.isEmpty())
