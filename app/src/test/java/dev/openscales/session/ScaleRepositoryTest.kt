@@ -336,7 +336,7 @@ class ScaleRepositoryTest {
     }
 
     @Test
-    fun `reset zeroes the app timer without touching the scale`() = runTest {
+    fun `reset reaches the scale once and is not repeated at zero`() = runTest {
         val env = Env(this, basic3)
         runCurrent()
         env.repository.autoConnect()
@@ -349,11 +349,16 @@ class ScaleRepositoryTest {
         settle()
         assertEquals(TimerState.RESET, env.repository.state.value.timerState)
         assertEquals(0, env.repository.state.value.timeSeconds)
-        // Весы своего времени не присылали, сбрасывать им нечего — команда сброса не ушла.
-        val resets = env.transports.last().frames.count {
+        fun resets() = env.transports.last().frames.count {
             it.cmd == Cmd.TIMER && it.type == Frame.TYPE_WRITE && it.payload[0].toInt() == 3
         }
-        assertEquals(0, resets)
+        // Таймер весов запускало приложение — сброс до них доходит, хотя подтверждений оно не ждёт.
+        assertEquals(1, resets())
+
+        // Повторный сброс при нулевом таймере весы приняли бы за тару — он не уходит.
+        env.repository.resetTimer()
+        settle()
+        assertEquals(1, resets())
     }
 
     @Test

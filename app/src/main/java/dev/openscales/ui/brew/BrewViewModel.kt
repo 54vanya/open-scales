@@ -14,6 +14,7 @@ import dev.openscales.recipe.RecipeItem
 import dev.openscales.recipe.RecipeTimeline
 import dev.openscales.recipe.TareState
 import dev.openscales.recipe.toGrams
+import dev.openscales.session.CommandException
 import dev.openscales.session.ScaleRepository
 import dev.openscales.session.ScaleState
 import dev.openscales.sound.StepSignal
@@ -345,7 +346,7 @@ class BrewViewModel(
         partTare.update { it.copy(busy = true) }
         viewModelScope.launch {
             try {
-                repository.withSession { tare() }
+                tareScale()
                 if (attempt == tareAttempt) {
                     awaitingPartZero = part
                     // Весы уже показывали ноль — одинаковое состояние повторно не придёт, берём его сейчас.
@@ -357,6 +358,18 @@ class BrewViewModel(
                 if (attempt == tareAttempt) partTare.update { it.copy(busy = false) }
                 commandErrorRes(e, repository.state.value.isReady)?.let { _errors.trySend(it) }
             }
+        }
+    }
+
+    /**
+     * Тара для «Старт» и шага «Тара». Если тара уже в полёте (кнопку «Тара» нажали мгновением раньше), очередь
+     * новую не берёт — но весы всё равно обнулятся, поэтому ждём ноль от неё, а не откатываем нажатие.
+     */
+    private suspend fun tareScale() {
+        try {
+            repository.withSession { tare() }
+        } catch (e: CommandException) {
+            if (e.kind != CommandException.Kind.CANCELLED || !repository.state.value.isReady) throw e
         }
     }
 
@@ -407,7 +420,7 @@ class BrewViewModel(
                 val attempt = ++startAttempt
                 viewModelScope.launch {
                     try {
-                        repository.withSession { tare() }
+                        tareScale()
                         if (attempt == startAttempt && stage.value == Stage.ARMED) {
                             awaitingZero = true
                             // Весы уже показывали ноль — одинаковое состояние повторно не придёт, берём его сейчас.

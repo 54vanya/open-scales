@@ -17,7 +17,7 @@ class BleJournalTest {
     fun `ring buffer keeps the last 2000 entries`() {
         val journal = BleJournal()
         repeat(2500) { journal.add(BleJournal.Kind.INFO, "e$it") }
-        val entries = journal.entries.value
+        val entries = journal.entries
         assertEquals(2000, entries.size)
         assertEquals("e500", entries.first().text)
         assertEquals("e2499", entries.last().text)
@@ -41,7 +41,7 @@ class BleJournalTest {
         )
         s.start()
         settle()
-        val lines = journal.entries.value.map { "${it.kind} ${it.text}" }
+        val lines = journal.entries.map { "${it.kind} ${it.text}" }
         listOf("CONNECTING", "BONDING", "SUBSCRIBING", "HANDSHAKING", "READY")
             .forEach { phase -> assertTrue(phase, lines.any { it == "PHASE phase=$phase" }) }
         assertTrue(lines.any { it.startsWith("MTU request MTU 247 ok") })
@@ -59,19 +59,19 @@ class BleJournalTest {
         journal.add(BleJournal.Kind.TIMER, "late tick", notable = true)
         repeat(5000) { journal.add(BleJournal.Kind.RX, "frame $it") }
         repeat(100) { journal.add(BleJournal.Kind.TIMER, "tick $it") }
-        assertTrue(journal.entries.value.none { it.kind == BleJournal.Kind.STALL })
-        assertEquals(listOf("main thread busy 2000ms", "late tick"), journal.notable.value.map { it.text })
+        assertTrue(journal.entries.none { it.kind == BleJournal.Kind.STALL })
+        assertEquals(listOf("main thread busy 2000ms", "late tick"), journal.notable.map { it.text })
     }
 
     @Test
     fun `notable buffer keeps the last 500 entries and clear empties both`() {
         val journal = BleJournal()
         repeat(600) { journal.add(BleJournal.Kind.INFO, "e$it") }
-        assertEquals(500, journal.notable.value.size)
-        assertEquals("e100", journal.notable.value.first().text)
+        assertEquals(500, journal.notable.size)
+        assertEquals("e100", journal.notable.first().text)
         journal.clear()
-        assertTrue(journal.entries.value.isEmpty())
-        assertTrue(journal.notable.value.isEmpty())
+        assertTrue(journal.entries.isEmpty())
+        assertTrue(journal.notable.isEmpty())
     }
 
     @Test
@@ -94,7 +94,7 @@ class BleJournalTest {
         var now = 0L
         val fake = FakeBleTransport()
         val logging = LoggingBleTransport(fake, journal, nowMs = { now })
-        val gaps = { journal.notable.value.filter { it.kind == BleJournal.Kind.GAP }.map { it.text } }
+        val gaps = { journal.notable.filter { it.kind == BleJournal.Kind.GAP }.map { it.text } }
         backgroundScope.launch { logging.events.collect {} }
         settle()
         // Время кадра берётся при доставке в коллектор, поэтому после каждого кадра — settle().

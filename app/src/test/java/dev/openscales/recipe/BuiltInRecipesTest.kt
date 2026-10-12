@@ -35,7 +35,7 @@ class BuiltInRecipesTest {
         Expected(BuiltInRecipes.chemex, 42.0, 700.0, 240, RecipeCategory.CHEMEX, Difficulty.EASY),
         Expected(BuiltInRecipes.hoffmannAeropress, 11.0, 200.0, 180, aeropress, Difficulty.EASY),
         Expected(BuiltInRecipes.invertedAeropress, 15.0, 200.0, 160, aeropress, Difficulty.MEDIUM),
-        Expected(BuiltInRecipes.littleAeropress, 18.0, 94.0, 130, aeropress, Difficulty.MEDIUM),
+        Expected(BuiltInRecipes.littleAeropress, 18.0, 186.0, 155, aeropress, Difficulty.MEDIUM),
         Expected(BuiltInRecipes.vanBunnikAeropress, 30.0, 200.0, 100, aeropress, Difficulty.MEDIUM),
         Expected(BuiltInRecipes.hoffmannFrenchPress, 30.0, 500.0, 585, RecipeCategory.FRENCH_PRESS, Difficulty.EASY),
     )
@@ -50,7 +50,9 @@ class BuiltInRecipesTest {
             assertEquals(r.id, e.totalS, RecipeTimeline(r).total)
             assertEquals(r.id, e.category, r.category)
             assertEquals(r.id, e.difficulty, r.difficulty)
-            assertTrue(r.id, r.defaultTargetsG.zipWithNext().all { (a, b) -> a <= b })
+            // Рубежи не убывают внутри части: после шага «Тара» отсчёт начинается заново.
+            val parts = r.targetsByPart(r.defaultDoseG.toDouble())
+            assertTrue(r.id, parts.all { part -> part.zipWithNext().all { (a, b) -> a.second <= b.second } })
         }
         assertEquals(BuiltInRecipes.all.size, BuiltInRecipes.all.map { it.id }.toSet().size)
     }
@@ -68,7 +70,7 @@ class BuiltInRecipesTest {
         assertEquals(listOf(50, 100, 150, 200, 250), targets(BuiltInRecipes.hoffmannOneCup))
         assertEquals(listOf(60, 120, 280), targets(BuiltInRecipes.kasuyaSwitch))
         assertEquals(listOf(500), targets(BuiltInRecipes.hoffmannFrenchPress))
-        assertEquals(listOf(94), targets(BuiltInRecipes.littleAeropress))
+        assertEquals(listOf(94, 92), targets(BuiltInRecipes.littleAeropress))
         assertEquals(listOf(100, 100), targets(BuiltInRecipes.vanBunnikAeropress))
         assertEquals(listOf(60, 120, 170, 270), targets(BuiltInRecipes.woelflPourOver))
         assertEquals(listOf(50, 100, 150, 200), targets(BuiltInRecipes.hsuPourOver))
@@ -130,6 +132,36 @@ class BuiltInRecipesTest {
         val tare = r.items[5] as RecipeItem.Step
         assertTrue(tare.tare)
         assertEquals(75, RecipeTimeline(r).startOf(5))
+    }
+
+    @Test
+    fun `little dilutes after a tare`() {
+        val r = BuiltInRecipes.littleAeropress
+        assertEquals(listOf(0, 0, 0, 0, 0, 0, 1, 1), r.partOf)
+        val byPart = r.targetsByPart(20.0).map { part -> part.map { (i, g) -> i to Math.round(g).toInt() } }
+        assertEquals(listOf(listOf(0 to 104), listOf(7 to 102)), byPart)
+        assertTrue((r.items[6] as RecipeItem.Step).tare)
+        assertEquals(130, RecipeTimeline(r).startOf(6))
+        assertTrue(r.items.none { it is RecipeItem.Hint })
+    }
+
+    /**
+     * Вес в тексте не пересчитывается на дозу и при другой дозе спорит с рубежом шага: сколько лить, показывает
+     * только рубеж. Тексты встроенных рецептов — строковые ресурсы, поэтому проверяются сами файлы строк.
+     */
+    @Test
+    fun `recipe strings carry no gram amounts`() {
+        val grams = Regex("""\d\s?(г|g)(?!\p{L})""")
+        val string = Regex("""<string name="(recipe_[a-z0-9_]+)">(.*?)</string>""")
+        for (dir in listOf("values", "values-ru")) {
+            val file = java.io.File("src/main/res/$dir/strings.xml")
+            assertTrue("$file not found", file.isFile)
+            val offenders = string.findAll(file.readText())
+                .filter { grams.containsMatchIn(it.groupValues[2]) }
+                .map { it.groupValues[1] }
+                .toList()
+            assertEquals(dir, emptyList<String>(), offenders)
+        }
     }
 
     @Test

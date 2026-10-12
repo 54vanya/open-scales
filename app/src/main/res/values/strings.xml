@@ -227,7 +227,6 @@
     <string name="recipe_step_bloom_second">Second bloom</string>
     <string name="recipe_step_flip">Flip</string>
     <string name="recipe_note_spiral_no_swirl">In a spiral, don\'t swirl</string>
-    <string name="recipe_note_no_swirl">Another 45 g in a spiral, don\'t swirl</string>
     <string name="recipe_note_energetic_coin">With energy, small circles in the center</string>
     <string name="recipe_hint_drawdown_230">Drawdown should finish by 2:30</string>
     <string name="recipe_inverted_aeropress_title">Inverted AeroPress</string>
@@ -251,7 +250,7 @@
     <string name="recipe_kalita_title">Kalita Wave</string>
     <string name="recipe_kalita_description">Medium-fine grind. Water about 96 °C.</string>
     <string name="recipe_note_spiral_slowly">Slow spiral</string>
-    <string name="recipe_note_pulses">Small pulses of 25–50 g onto the lighter spots</string>
+    <string name="recipe_note_pulses">Small pulses onto the lighter spots</string>
     <string name="recipe_chemex_title">Chemex</string>
     <string name="recipe_chemex_description">Medium-coarse grind. Water about 96 °C. For 2–3 cups.</string>
     <string name="recipe_note_stir_dry">Stir so no dry clumps remain</string>
@@ -265,13 +264,13 @@
 
     <!-- Иммерсия, чемпионские рецепты, сложность -->
     <string name="recipe_hoffmann_one_cup_title">Hoffmann’s 1-cup V60</string>
-    <string name="recipe_hoffmann_one_cup_description">Five equal 50 g pours. Medium-fine grind, as fine as you can go without bitterness. Water: light roast — just off the boil, medium — 96 °C.</string>
+    <string name="recipe_hoffmann_one_cup_description">Five equal pours. Medium-fine grind, as fine as you can go without bitterness. Water: light roast — just off the boil, medium — 96 °C.</string>
     <string name="recipe_kasuya_switch_title">Tetsu Kasuya’s hybrid</string>
     <string name="recipe_kasuya_switch_description">Hybrid: pour-over with the valve open, then immersion. Medium-fine grind. Water 93 °C, the third pour about 75 °C. Drawdown past 3:00 — grind coarser.</string>
     <string name="recipe_hoffmann_french_press_title">Hoffmann’s French press</string>
     <string name="recipe_hoffmann_french_press_description">A long steep with no pressing. Medium-coarse grind. Water just off the boil. Makes 2 cups.</string>
     <string name="recipe_wac2022_title">Jibbi Little (WAC 2022)</string>
-    <string name="recipe_wac2022_description">2022 World AeroPress Champion (Australia). Inverted. Water 90 °C. After pressing, dilute to 150 g.</string>
+    <string name="recipe_wac2022_description">2022 World AeroPress Champion (Australia). Inverted. Water 90 °C.</string>
     <string name="recipe_wac2019_title">Wendelien van Bunnik (WAC 2019)</string>
     <string name="recipe_wac2019_description">2019 World AeroPress Champion (Netherlands). Lots of coffee, a short steep, dilution after pressing. Inverted. Water 92 °C.</string>
     <string name="recipe_step_open_valve">Open the valve</string>
@@ -291,10 +290,10 @@
     <string name="recipe_note_press_all">All the way</string>
     <string name="recipe_hint_drawdown_300">The drawdown should finish by 3:00</string>
     <string name="recipe_hint_plunge_to_surface">Lower the plunger just to the surface and pour slowly</string>
-    <string name="recipe_hint_dilute_150">Dilute with hot water to 150 g</string>
     <string name="recipe_step_tare">Zero the scale</string>
     <string name="recipe_step_dilute">Dilute</string>
     <string name="recipe_note_remove_aeropress">Remove the AeroPress, the cup stays on the scale</string>
+    <string name="recipe_note_hot_water">With hot water</string>
     <string name="recipe_note_hot_water_to_taste">With hot water, to taste</string>
     <string name="recipe_group_french_press">French press</string>
     <string name="difficulty_easy">Easy</string>
@@ -304,7 +303,7 @@
     <string name="recipe_wbrc2024_title">Martin Wölfl (WBrC 2024)</string>
     <string name="recipe_wbrc2024_description">2024 World Brewers Cup Champion (Austria). Four pours — at 0:00, 0:40, 1:20 and 2:00, done by 2:20–2:25. Medium-fine grind. Water 93 °C. Competition brewer: flat-bottom Orea.</string>
     <string name="recipe_wbrc2022_title">Sherry Hsu (WBrC 2022)</string>
-    <string name="recipe_wbrc2022_description">2022 World Brewers Cup Champion (Taiwan). Four 50 g pours every 30 seconds: the first with 70 °C water, the rest 95 °C. Medium-coarse grind. Competition brewer: flat-bottom Orea.</string>
+    <string name="recipe_wbrc2022_description">2022 World Brewers Cup Champion (Taiwan). Four equal pours every 30 seconds: the first with 70 °C water, the rest 95 °C. Medium-coarse grind. Competition brewer: flat-bottom Orea.</string>
     <string name="recipe_fukahori_switch_title">Emi Fukahori (WBrC 2018)</string>
     <string name="recipe_fukahori_switch_description">2018 World Brewers Cup Champion (Switzerland). Her easy Switch recipe from the MAME cafés. Medium-coarse grind.</string>
     <string name="recipe_note_water_70">Water 70 °C</string>

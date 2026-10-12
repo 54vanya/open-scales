@@ -37,6 +37,8 @@ import dev.openscales.recipe.Recipe
 import dev.openscales.recipe.RecipeDraft
 import dev.openscales.ui.editor.RecipeEditorActivity
 import dev.openscales.ui.OpenScalesActivity
+import dev.openscales.ui.rememberBlePrerequisite
+import dev.openscales.ui.scan.BlePrerequisite
 import dev.openscales.ui.theme.AppTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -94,7 +96,14 @@ class BrewActivity : OpenScalesActivity() {
                 LaunchedEffect(Unit) { viewModel.errors.collect { snackbar.showSnackbar(getString(it)) } }
 
                 // Звуковой тракт держим готовым, пока экран на виду, — как на главном экране.
-                LifecycleEventEffect(Lifecycle.Event.ON_START) { app.buttonSound.setDashboardVisible(true) }
+                // Связь могла пропасть, пока приложение было свёрнуто (в фоне повторы не идут), а возвращаются
+                // прямо сюда, мимо главного экрана: пробуем подключиться заново, как он.
+                val bluetooth = rememberBlePrerequisite()
+                LifecycleEventEffect(Lifecycle.Event.ON_START) {
+                    val virtual = app.isVirtual(app.repository.savedDevice.value?.address)
+                    if (virtual || bluetooth.value == BlePrerequisite.OK) app.repository.autoConnect()
+                    app.buttonSound.setDashboardVisible(true)
+                }
                 LifecycleEventEffect(Lifecycle.Event.ON_STOP) { app.buttonSound.setDashboardVisible(false) }
 
                 // Удержание экрана — по той же настройке, что на главном экране.

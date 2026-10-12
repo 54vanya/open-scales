@@ -27,6 +27,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -52,9 +53,8 @@ class JournalActivity : OpenScalesActivity() {
         setContent {
             AppTheme {
                 var notableOnly by rememberSaveable { mutableStateOf(false) }
-                val all by journal.entries.collectAsStateWithLifecycle()
-                val notable by journal.notable.collectAsStateWithLifecycle()
-                val entries = if (notableOnly) notable else all
+                val changes by journal.changes.collectAsStateWithLifecycle()
+                val entries = remember(changes, notableOnly) { if (notableOnly) journal.notable else journal.entries }
                 val capacity = if (notableOnly) BleJournal.NOTABLE_CAPACITY else BleJournal.DEFAULT_CAPACITY
                 val listState = rememberLazyListState()
                 LaunchedEffect(notableOnly, entries.size) { if (entries.isNotEmpty()) listState.scrollToItem(entries.lastIndex) }
