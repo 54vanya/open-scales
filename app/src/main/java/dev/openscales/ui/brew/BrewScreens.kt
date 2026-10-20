@@ -109,6 +109,7 @@ import dev.openscales.ui.components.symbolRes
 import dev.openscales.ui.recipes.HintRow
 import dev.openscales.ui.recipes.StepCard
 import dev.openscales.ui.recipes.resolve
+import dev.openscales.ui.recipes.resolveShort
 import dev.openscales.ui.recipes.stepWeightWithUnit
 import dev.openscales.ui.theme.OpenScalesTheme
 import dev.openscales.ui.theme.UnitTextStyle
@@ -140,7 +141,7 @@ fun BeansScreen(
             snackbarHost = { SnackbarHost(snackbarHostState) },
             topBar = {
                 BrewTopBar(
-                    recipe.title.resolve(),
+                    recipe.title.resolveShort(),
                     stringResource(R.string.brew_beans_title),
                     onBack,
                     onEdit,
@@ -388,7 +389,7 @@ fun StepsScreen(
             snackbarHost = { SnackbarHost(snackbarHostState) },
             topBar = {
                 BrewTopBar(
-                    recipe.title.resolve(),
+                    recipe.title.resolveShort(),
                     stringResource(R.string.brew_dose, stepWeightWithUnit(dose, unit)),
                     onBack,
                     onSwap = onSwap,
@@ -802,8 +803,7 @@ private fun BrewTopBar(
     manualDoseEnabled: Boolean = true,
 ) {
     TopAppBar(
-        // Авторское название с автором в одну строку не помещается: заголовок переносится, а не обрезается.
-        title = { Text(title, maxLines = 2, overflow = TextOverflow.Ellipsis) },
+        title = { Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
         subtitle = { Text(subtitle, maxLines = 1, overflow = TextOverflow.Ellipsis) },
         navigationIcon = {
             IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.back)) }

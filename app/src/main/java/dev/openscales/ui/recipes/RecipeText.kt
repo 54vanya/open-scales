@@ -21,6 +21,19 @@ fun Text.resolve(): String = when (this) {
     is Text.Plain -> value
 }
 
+/**
+ * Короткое название для заголовка варки: у встроенного рецепта — авторское название без автора (часть до « · »),
+ * у своего — всё название: это свободный текст пользователя, и резать его по знаку нельзя.
+ */
+@Composable
+fun Text.resolveShort(): String = when (this) {
+    is Text.Res -> stringResource(id).substringBefore(AUTHOR_SEPARATOR)
+    is Text.Plain -> value
+}
+
+/** Разделитель авторского названия и автора в ресурсах встроенных рецептов: точка приклеена к автору. */
+private const val AUTHOR_SEPARATOR = " ·\u00A0"
+
 /** «Просто», «Средне», «Сложно». */
 fun Difficulty.labelRes(): Int = when (this) {
     Difficulty.EASY -> R.string.difficulty_easy
